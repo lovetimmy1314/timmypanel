@@ -110,14 +110,17 @@ export const usePanelStore = defineStore('panel', () => {
   const deleteSite = (id: number) => api.del(`/sites/${id}`)
 
   // 把拖拽后的完整顺序整体提交，后端在一个事务里写完，不会留下半套顺序。
-  // boards 里的 Site 是 store 里的同一批对象引用，顺手把本地状态也改掉，
-  // 这样列表重建时不会闪回旧顺序。
+  // 同时按 id 回写 store 里的那批 Site，这样 grouped 重算出来的就是拖完的样子，
+  // 列表重建时不会闪回旧顺序。**按 id 找而不是直接改 boards 里的对象**：
+  // 拖拽库有可能把副本塞进 boards（决策 029），改副本等于没改。
   function persistSiteOrder(boards: { group: Group; sites: Site[] }[]) {
+    const byId = new Map(sites.value.map((s) => [s.id, s]))
     const items: { id: number; groupId: number; sort: number }[] = []
     for (const bucket of boards) {
       bucket.sites.forEach((s, idx) => {
-        s.groupId = bucket.group.id
-        s.sort = idx
+        const local = byId.get(s.id) ?? s
+        local.groupId = bucket.group.id
+        local.sort = idx
         items.push({ id: s.id, groupId: bucket.group.id, sort: idx })
       })
     }

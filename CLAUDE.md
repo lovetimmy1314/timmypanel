@@ -200,6 +200,12 @@ color/gradient 走 `safeCSSColor`（只允许颜色和渐变函数用得到的�
 编辑分两级：全局编辑下各组 `VueDraggable` 共用拖拽组名 `sites`（可跨组）；分组级编辑
 （分组名旁的铅笔）下 `dragGroup` 按组隔离成 `sites-{id}`，拖拽天然锁在组内（决策 028）。
 
+**`BoardGrid` 上那个 `:clone="keepRef"` 不能删**。vue-draggable-plus 的 `clone` 默认是
+`JSON.parse(JSON.stringify(x))`，跨组拖动时插进目标数组的会是**副本**，于是 `boards` 里那张卡片
+不再是 store 里的对象，`persistSiteOrder` 就地改的 groupId 写进了副本，下一次 `grouped`
+重算就把它弹回原分组——现象是「拖第二张时第一张一起还原」，全程 200 无报错（决策 029）。
+`persistSiteOrder` 也因此改成按 id 在 `sites.value` 里找对象回写，别化简回直接改传进来的那个。
+
 ### 图标全部离线，分两层供货
 
 `@iconify/vue` 默认是运行时去 `api.iconify.design` 取图形数据的，这条路现在**被关掉了**

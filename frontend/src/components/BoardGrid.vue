@@ -21,6 +21,13 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{ dragEnd: []; edit: [Site]; remove: [Site] }>()
+
+// 跨组拖动时 vue-draggable-plus 默认拿 JSON.parse(JSON.stringify(x)) 造一个新对象
+// 插进目标数组，于是落到新分组里的那张卡片不再是 store 里的那个 Site。
+// persistSiteOrder 就地改的 groupId/sort 只写进了这个副本，store 仍是旧分组，
+// 下一次 grouped 重算就把它打回原处（见决策 029）。这里换成恒等函数保住引用。
+// 必须是模块级的稳定引用，写成模板里的内联箭头会让 options 每次渲染都变。
+const keepRef = (s: Site) => s
 </script>
 
 <template>
@@ -28,6 +35,7 @@ const emit = defineEmits<{ dragEnd: []; edit: [Site]; remove: [Site] }>()
     v-model="props.board.sites"
     :animation="160"
     :group="dragGroup"
+    :clone="keepRef"
     ghost-class="tp-ghost"
     :disabled="!canDrag"
     class="grid gap-3"
