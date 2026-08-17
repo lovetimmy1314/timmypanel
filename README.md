@@ -17,7 +17,9 @@ into the Go binary with `embed.FS`, so there is no Node runtime, no separate web
 database to install. Copy the binary to a VPS, point a reverse proxy at it, done — or run the
 prebuilt Docker image and skip even that.
 
-<!-- Screenshots go here. -->
+![screenshot1](screenshot/1.jpg)
+![screenshot2](screenshot/2.jpg)
+![screenshot3](screenshot/3.jpg)
 
 ## Features
 
