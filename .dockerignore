@@ -1,0 +1,43 @@
+# Docker 构建上下文的排除清单。构建用的是仓库根目录（`docker build -f deploy/Dockerfile .`），
+# 不排除的话首次构建要往 daemon 传 250 MB 以上。
+#
+# 注意：这份清单**不是**为了防止密钥进镜像——deploy/Dockerfile 只 COPY frontend/ 和
+# backend/，data/config.yaml 从来不会被拷进任何一层。它进的是构建上下文和 BuildKit
+# 的上下文缓存，仅此而已。真正会影响产物正确性的是下面 dist 那一条，见注释。
+
+# 依赖：容器里 npm ci 自己装。
+# 宿主机这份不会弄坏构建（npm 的平台包是带后缀的独立目录，win32-x64 和 linux-x64
+# 不同路径，COPY 合并时盖不掉容器里那份），但它是 186 MB 的纯浪费。
+node_modules/
+frontend/node_modules/
+
+# 构建产物
+/dist/
+/timmypanel
+/timmypanel.exe
+
+# 前端产物整个排除掉，这一条影响的是**产物正确性**，不只是速度：
+# COPY 是合并不是替换，宿主机上一次构建残留的 assets/xxx-<旧哈希>.js 如果留在
+# 上下文里，会和 COPY --from=frontend 的新产物并存，一起被 go:embed 打进二进制。
+# 全排除之后 dist 只可能来自 frontend 阶段；万一那行 COPY 的路径写错，
+# go:embed 会因为空目录直接编译失败，而不是静默产出一个夹带陈旧 chunk 的镜像。
+backend/internal/web/dist/
+
+# 运行时数据：sqlite、上传的图片、含 auth.secret 和管理员密码的配置
+/data/
+backend/data/
+
+# 版本库元数据、本机配置
+.git/
+.github/
+.gitignore
+.claude/
+.vscode/
+.idea/
+
+# 文档与非构建资源（brand/ 里的标志是内联进 .vue 的，前端不从这里读，见决策 018）
+docs/
+brand/
+*.md
+build.ps1
+build.bat

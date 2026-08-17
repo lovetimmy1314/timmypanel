@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 140" width="120" height="140" role="img" aria-label="Timmy">
+  <title>Timmy</title>
+  <style>
+    .bg { fill: #534AB7 }
+    @media (prefers-color-scheme: dark) { .bg { fill: #7F77DD } }
+  </style>
+  <path class="bg" d="M0 16Q0 0 16 0H104Q120 0 120 16V140L60 102L0 140Z"/>
+  <rect fill="#FFFFFF" x="22" y="30" width="76" height="16" rx="4"/>
+  <rect fill="#FFFFFF" x="52" y="30" width="16" height="56" rx="4"/>
+</svg>

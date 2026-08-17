@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#534AB7" />
+    <!-- 和 frontend/index.html 里那份是同一张图（brand/favicon.svg），改一处要改两处。 -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect fill='%23534AB7' width='128' height='128' rx='20'/><g fill='%23fff'><rect x='13' y='16' width='26' height='26' rx='5'/><rect x='51' y='16' width='26' height='26' rx='5'/><rect x='89' y='16' width='26' height='26' rx='5'/><rect x='51' y='51' width='26' height='26' rx='5'/><rect x='51' y='86' width='26' height='26' rx='5'/></g></svg>"
+    />
+    <title>Timmypanel</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        font: 15px/1.7 system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+        background:
+          radial-gradient(1100px 620px at 78% 8%, rgba(29, 158, 117, 0.16), transparent 62%),
+          linear-gradient(140deg, #4a41a6 0%, #241f57 42%, #15132e 72%, #0e1a1a 100%);
+        color: #e2e8f0;
+      }
+      main { max-width: 34rem; padding: 2rem; }
+      .brand { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.25rem; }
+      .brand svg { border-radius: 12px; box-shadow: 0 8px 24px -10px rgba(0, 0, 0, 0.7); }
+      .brand span { font-size: 1.05rem; font-weight: 600; letter-spacing: 0.02em; color: #fff; }
+      h1 { font-size: 1.25rem; margin: 0 0 0.75rem; color: #fff; }
+      code {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 0.15em 0.4em;
+        border-radius: 4px;
+        font-size: 0.9em;
+      }
+      p { margin: 0.6rem 0; color: #b6b2d4; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="brand">
+        <svg width="40" height="40" viewBox="0 0 128 128" role="img" aria-label="Timmypanel">
+          <rect fill="#534AB7" width="128" height="128" rx="29" />
+          <g fill="#fff">
+            <rect x="13" y="13" width="26" height="26" rx="6.5" />
+            <rect x="51" y="13" width="26" height="26" rx="6.5" />
+            <rect x="89" y="13" width="26" height="26" rx="6.5" />
+            <rect x="51" y="51" width="26" height="26" rx="6.5" />
+            <rect x="51" y="89" width="26" height="26" rx="6.5" />
+            <rect x="13" y="51" width="26" height="26" rx="6.5" fill-opacity=".24" />
+            <rect x="13" y="89" width="26" height="26" rx="6.5" fill-opacity=".24" />
+            <rect x="89" y="89" width="26" height="26" rx="6.5" fill-opacity=".24" />
+          </g>
+          <rect x="89" y="51" width="26" height="26" rx="6.5" fill="#9FE1CB" fill-opacity=".7" />
+        </svg>
+        <span>Timmypanel</span>
+      </div>
+      <h1>前端尚未构建</h1>
+      <p>
+        这是一个占位页。<code>go:embed</code> 要求 <code>dist/</code> 目录非空，
+        所以版本库里保留了这份文件，而带哈希的 <code>assets/</code> 不进版本库。
+      </p>
+      <p>要得到真正的界面，先构建前端再编译后端：</p>
+      <p>
+        <code>cd frontend &amp;&amp; npm run build</code><br />
+        <code>cd backend &amp;&amp; go build .</code>
+      </p>
+      <p>或者在项目根目录直接跑 <code>.\build.ps1</code>，它会按正确顺序做完这两步。</p>
+    </main>
+  </body>
+</html>

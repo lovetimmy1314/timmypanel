@@ -1,0 +1,26 @@
+# 运行时数据：sqlite、上传的图片、自动备份、含密钥的配置
+/data/
+# 开发时是 `cd backend && go run .`，config 里的 data.dir 相对**工作目录**，
+# 于是 sqlite 和上传的图片会落在 backend/data/。只写 /data/ 挡不住这一份。
+/backend/data/
+
+# 构建产物
+/dist/
+/timmypanel.exe
+/timmypanel
+# 前端构建产物。index.html 必须保留一份（embed 要求 dist 目录非空，
+# 未构建时它就是那个「请先构建前端」的占位页），assets 则不进版本库。
+backend/internal/web/dist/assets/
+# npm run build 会把 frontend/public/ 下的收藏图标和 manifest 原样拷到 dist 根目录
+backend/internal/web/dist/icons/
+backend/internal/web/dist/manifest.json
+
+# 依赖
+node_modules/
+
+# 编辑器与本机工具配置
+.vscode/
+.idea/
+/.claude/
+*.swp
+.DS_Store

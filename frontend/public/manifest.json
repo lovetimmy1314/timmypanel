@@ -1,0 +1,14 @@
+{
+  "name": "Timmypanel",
+  "short_name": "Timmypanel",
+  "description": "自用的网址导航站",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#534AB7",
+  "theme_color": "#534AB7",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

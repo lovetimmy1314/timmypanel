@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-label="Timmy">
+  <title>Timmy</title>
+  <rect fill="#7F77DD" x="0" y="0" width="128" height="128" rx="29"/>
+  <rect fill="#FFFFFF" x="13" y="13" width="26" height="26" rx="6.5"/>
+  <rect fill="#FFFFFF" x="51" y="13" width="26" height="26" rx="6.5"/>
+  <rect fill="#FFFFFF" x="89" y="13" width="26" height="26" rx="6.5"/>
+  <rect fill="#FFFFFF" fill-opacity=".26" x="13" y="51" width="26" height="26" rx="6.5"/>
+  <rect fill="#FFFFFF" x="51" y="51" width="26" height="26" rx="6.5"/>
+  <rect fill="#9FE1CB" fill-opacity=".7" x="89" y="51" width="26" height="26" rx="6.5"/>
+  <rect fill="#FFFFFF" fill-opacity=".26" x="13" y="89" width="26" height="26" rx="6.5"/>
+  <rect fill="#FFFFFF" x="51" y="89" width="26" height="26" rx="6.5"/>
+  <rect fill="#FFFFFF" fill-opacity=".26" x="89" y="89" width="26" height="26" rx="6.5"/>
+</svg>

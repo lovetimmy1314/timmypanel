@@ -1,0 +1,24 @@
+# 一律以 LF 存进版本库，工作区行尾由 core.autocrlf 决定。
+# 不声明的话每次 git add 都会刷一屏 "LF will be replaced by CRLF" 警告，
+# 而这个项目是每改完一件事就提交，噪声会很吵。
+* text=auto
+
+# PowerShell 脚本在 Windows 上保持 CRLF。
+# 注意 build.ps1 必须保留 UTF-8 BOM（PowerShell 5.1 否则按 ANSI 读中文注释），
+# git 不会动 BOM，但用编辑器改完记得确认还在。
+*.ps1 text eol=crlf
+
+# Go 源码必须检出成 LF：gofmt 把 CRLF 当成「需要重新格式化」，
+# 只留 text=auto 的话，Windows 上 clone 完跑 gofmt -l . 会列出仓库里
+# 每一个 .go 文件，提交前的检查就废了。这条不是洁癖，删了检查会全红。
+*.go text eol=lf
+
+# 这些在 Linux 上执行，强制 LF
+*.sh       text eol=lf
+Dockerfile text eol=lf
+Caddyfile  text eol=lf
+*.service  text eol=lf
+
+*.png binary
+*.ico binary
+*.webp binary

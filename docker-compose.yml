@@ -1,0 +1,51 @@
+# 拉现成镜像跑 Timmypanel。VPS 上只需要这一个文件：
+#
+#   docker compose pull && docker compose up -d
+#   docker compose logs timmypanel     # 初始管理员密码在这里
+#
+# 只有 app 一个容器：端口发布到回环口，HTTPS 由宿主机上已有的 Caddy/Nginx 反代，
+# 和 deploy/Caddyfile + systemd 那套的对外形态一致。
+# 要在本地自己构建而不是拉镜像，叠加 docker-compose.build.yml，见那个文件顶部。
+
+services:
+  timmypanel:
+    # 多架构镜像（amd64 + arm64），docker 会自动挑对的那个。
+    # 想钉死版本：TP_TAG=1.2.3 docker compose up -d
+    # 注意镜像 tag **不带 v**（git tag 是 v1.2.3，镜像出来是 1.2.3），
+    # metadata-action 的 {{version}} 会把前缀 v 去掉。
+    image: ghcr.io/lovetimmy1314/timmypanel:${TP_TAG:-latest}
+    container_name: timmypanel
+    restart: unless-stopped
+
+    # 只发布到回环口。Docker 发布端口是直接写 iptables 的，会绕过 ufw——
+    # 写成 "8080:8080"（不带 127.0.0.1）等于把面板裸奔到公网，防火墙拦不住。
+    # 宿主机上已经有别的东西占着 8080 时，用 TP_PORT=18080 docker compose up -d 换一个。
+    ports:
+      - "127.0.0.1:${TP_PORT:-8080}:8080"
+
+    environment:
+      TP_LISTEN: 0.0.0.0:8080
+      TP_DATA_DIR: /data
+      # HTTPS 反代下必须为 true，否则会话 Cookie 不带 Secure 标记
+      TP_SECURE: "true"
+      # 反代过来的源 IP 是网桥网关。下面固定了子网，所以这个值是确定的。
+      # 留空会让登录限流按网关 IP 归到同一个桶，且伪造的 X-Forwarded-For 能绕过它。
+      TP_TRUSTED_PROXIES: 172.28.0.1
+      TZ: Asia/Shanghai
+
+    volumes:
+      - timmypanel-data:/data
+
+    # 关闭时要 drain 10 秒（main.go 的 Shutdown 超时），默认 10s 正好卡在边界上
+    stop_grace_period: 30s
+
+volumes:
+  timmypanel-data:
+
+# 固定子网是为了让上面的 TP_TRUSTED_PROXIES 能写死：不固定的话 compose 每次
+# 分到的网段不定（172.18/172.19/…），网关 IP 跟着变，而这一项配错等于限流失效。
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 170 56" width="170" height="56" role="img" aria-label="Timmy">
+  <title>Timmy</title>
+  <style>
+    .bg { fill: #534AB7 }
+    .on { fill: #FFFFFF }
+    .off { fill: #FFFFFF; fill-opacity: .22 }
+    .ac { fill: #9FE1CB; fill-opacity: .6 }
+    .wm { fill: currentColor; font-family: "Inter", "Helvetica Neue", "PingFang SC", system-ui, sans-serif; font-size: 32px; font-weight: 500; letter-spacing: -0.5px }
+    @media (prefers-color-scheme: dark) { .bg { fill: #7F77DD } }
+  </style>
+  <g transform="scale(0.4375)">
+    <rect class="bg" x="0" y="0" width="128" height="128" rx="29"/>
+    <rect class="on" x="13" y="13" width="26" height="26" rx="6.5"/>
+    <rect class="on" x="51" y="13" width="26" height="26" rx="6.5"/>
+    <rect class="on" x="89" y="13" width="26" height="26" rx="6.5"/>
+    <rect class="off" x="13" y="51" width="26" height="26" rx="6.5"/>
+    <rect class="on" x="51" y="51" width="26" height="26" rx="6.5"/>
+    <rect class="ac" x="89" y="51" width="26" height="26" rx="6.5"/>
+    <rect class="off" x="13" y="89" width="26" height="26" rx="6.5"/>
+    <rect class="on" x="51" y="89" width="26" height="26" rx="6.5"/>
+    <rect class="off" x="89" y="89" width="26" height="26" rx="6.5"/>
+  </g>
+  <text class="wm" x="72" y="28" dominant-baseline="central">timmy</text>
+</svg>

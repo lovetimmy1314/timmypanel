@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#534AB7" />
+    <!-- 品牌图标（brand/favicon.svg）内联成 data URI。色值里的 # 必须写成 %23，
+         否则会被当成 URI 片段截断。这份和 src/stores/site.ts 的 DEFAULT_FAVICON
+         是同一张图，改一处要改两处。 -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 128'><rect fill='%23534AB7' width='128' height='128' rx='20'/><g fill='%23fff'><rect x='13' y='16' width='26' height='26' rx='5'/><rect x='51' y='16' width='26' height='26' rx='5'/><rect x='89' y='16' width='26' height='26' rx='5'/><rect x='51' y='51' width='26' height='26' rx='5'/><rect x='51' y='86' width='26' height='26' rx='5'/></g></svg>"
+    />
+    <!-- 手机收藏 / 加到主屏用的位图：apple-touch-icon 不支持 data URI，
+         必须是真实路径，所以这几个文件放在 public/（决策 025），
+         由 brand/gen_touch_icons.py 生成。管理员配了站点图标时，
+         site.ts 会把 apple-touch-icon 换成那张。 -->
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <!-- 用 .json 后缀而不是 .webmanifest：Go 按扩展名定 MIME，
+         .webmanifest 在 Windows 上会回落成 text/plain。 -->
+    <link rel="manifest" href="/manifest.json" />
+    <title>Timmypanel</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

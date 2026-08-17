@@ -1,0 +1,258 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 品牌色，色值表在仓库根的 brand/README.md。
+   深浅两套由 App.vue 盖在 <html> 上的 data-theme 决定——不能只写
+   prefers-color-scheme：界面主题是用户在设置里选的，可以和系统不一致。
+   没有 data-theme 时（首帧、或 theme=auto）才回落到系统偏好。 */
+:root {
+  color-scheme: light dark;
+  --tp-brand: #534ab7;
+  --tp-brand-hover: #6a61c9;
+  --tp-brand-pressed: #423a9b;
+  --tp-brand-accent: #1d9e75;
+  /* 主标右中那格用的浅色点缀，压在品牌紫底上，两种模式下都是这个值 */
+  --tp-brand-accent-soft: #9fe1cb;
+
+  /* 首页配色。首页压在用户自选的壁纸上，所以「浅色模式」不是换个背景色就完事：
+     遮罩层要换成白的（--tp-scrim + Home.vue 的保底不透明度），文字和卡片才有底可依。
+     登录页和账号管理页不吃这套——它们的背景恒定是深色品牌渐变（.tp-hero-bg），
+     那两页里的 text-white 是对的，别顺手换成变量。 */
+  --tp-scrim: #ffffff;
+  --tp-fg: #101828;
+  --tp-fg-soft: rgba(16, 24, 40, 0.74);
+  --tp-fg-dim: rgba(16, 24, 40, 0.52);
+  --tp-fg-faint: rgba(16, 24, 40, 0.38);
+  --tp-surface: rgba(255, 255, 255, 0.66);
+  --tp-surface-hover: rgba(255, 255, 255, 0.88);
+  --tp-surface-border: rgba(16, 24, 40, 0.1);
+  --tp-card-shadow: 0 10px 26px -12px rgba(16, 24, 40, 0.35);
+  --tp-hover: rgba(16, 24, 40, 0.06);
+  --tp-active: rgba(16, 24, 40, 0.11);
+  --tp-scrollbar: rgba(16, 24, 40, 0.22);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --tp-brand: #7f77dd;
+    --tp-brand-hover: #948de6;
+    --tp-brand-pressed: #6a62c8;
+    --tp-brand-accent: #9fe1cb;
+
+    --tp-scrim: #000000;
+    --tp-fg: #ffffff;
+    --tp-fg-soft: rgba(255, 255, 255, 0.85);
+    --tp-fg-dim: rgba(255, 255, 255, 0.6);
+    --tp-fg-faint: rgba(255, 255, 255, 0.4);
+    --tp-surface: rgba(255, 255, 255, 0.13);
+    --tp-surface-hover: rgba(255, 255, 255, 0.22);
+    --tp-surface-border: rgba(255, 255, 255, 0.16);
+    --tp-card-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.6);
+    --tp-hover: rgba(255, 255, 255, 0.15);
+    --tp-active: rgba(255, 255, 255, 0.25);
+    --tp-scrollbar: rgba(255, 255, 255, 0.25);
+  }
+}
+
+:root[data-theme='dark'] {
+  --tp-brand: #7f77dd;
+  --tp-brand-hover: #948de6;
+  --tp-brand-pressed: #6a62c8;
+  --tp-brand-accent: #9fe1cb;
+
+  --tp-scrim: #000000;
+  --tp-fg: #ffffff;
+  --tp-fg-soft: rgba(255, 255, 255, 0.85);
+  --tp-fg-dim: rgba(255, 255, 255, 0.6);
+  --tp-fg-faint: rgba(255, 255, 255, 0.4);
+  --tp-surface: rgba(255, 255, 255, 0.13);
+  --tp-surface-hover: rgba(255, 255, 255, 0.22);
+  --tp-surface-border: rgba(255, 255, 255, 0.16);
+  --tp-card-shadow: 0 10px 26px -10px rgba(0, 0, 0, 0.6);
+  --tp-hover: rgba(255, 255, 255, 0.15);
+  --tp-active: rgba(255, 255, 255, 0.25);
+  --tp-scrollbar: rgba(255, 255, 255, 0.25);
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* 登录页和账号管理页的默认底色。这两页没有用户自定义背景可用（登录页未登录、
+   账号管理是管理页），统一用品牌紫收束到近黑，末端带一点点缀色的绿。 */
+.tp-hero-bg {
+  background:
+    radial-gradient(1100px 620px at 78% 8%, rgba(29, 158, 117, 0.16), transparent 62%),
+    linear-gradient(140deg, #4a41a6 0%, #241f57 42%, #15132e 72%, #0e1a1a 100%);
+}
+
+/* 首页背景层：图片/纯色/渐变三选一，模糊和遮罩由设置里的滑块控制。 */
+.tp-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  transition: filter 0.3s ease;
+}
+
+/* 遮罩的颜色跟着主题走：深色模式压黑、浅色模式压白。浅色模式下它还有一个
+   保底不透明度（Home.vue 的 maskStyle），否则深色壁纸配深色文字读不了。 */
+.tp-bg-mask {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--tp-scrim);
+  pointer-events: none;
+  transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+/* 卡片压在壁纸上，要有足够对比度，用半透明毛玻璃而不是纯色块。 */
+.tp-card {
+  backdrop-filter: blur(10px);
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-surface-border);
+  transition: transform 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.tp-card:hover {
+  transform: translateY(-3px);
+  background: var(--tp-surface-hover);
+  box-shadow: var(--tp-card-shadow);
+}
+
+/* .tp-glass 是**深色底专用**的毛玻璃：登录页和账号管理页的背景恒为深色品牌渐变，
+   不跟主题切换。首页上的东西（搜索栏、候选列表）用 .tp-surface-glass。 */
+.tp-glass {
+  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.tp-surface-glass {
+  backdrop-filter: blur(12px);
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-surface-border);
+}
+
+/* 首页文字：直接写 text-white 在浅色模式下会看不见。 */
+.tp-text {
+  color: var(--tp-fg);
+}
+.tp-text-soft {
+  color: var(--tp-fg-soft);
+}
+.tp-text-dim {
+  color: var(--tp-fg-dim);
+}
+.tp-text-faint {
+  color: var(--tp-fg-faint);
+}
+
+/* 分组标题旁的数量小药丸 */
+.tp-pill {
+  border: 1px solid var(--tp-surface-border);
+  border-radius: 9999px;
+  padding: 0 6px;
+  font-size: 11px;
+  line-height: 16px;
+  color: var(--tp-fg-faint);
+}
+
+/* 自定义页脚：这个类一直挂在 Home.vue 上但之前没有定义，
+   深色壁纸下默认黑字会几乎看不见。 */
+.tp-footer {
+  margin-top: 24px;
+  padding-bottom: 8px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--tp-fg-dim);
+}
+.tp-footer a {
+  color: var(--tp-fg-soft);
+  text-underline-offset: 2px;
+}
+
+/* 搜索候选项这类「悬停变色」的行 */
+.tp-option {
+  color: var(--tp-fg);
+}
+.tp-option:hover {
+  background: var(--tp-hover);
+}
+.tp-option-active {
+  background: var(--tp-active);
+}
+
+/* 拖拽占位样式 */
+.tp-ghost {
+  opacity: 0.35;
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* 悬浮按钮：回到顶部（右下 .tp-fab-br）和分组跳转（左下 .tp-fab-bl）共用。
+   配色一律走 --tp-* 变量，深浅模式都能读；bottom/right 留出全面屏安全区。 */
+.tp-fab {
+  position: fixed;
+  z-index: 40;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  color: var(--tp-fg-soft);
+  backdrop-filter: blur(12px);
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-surface-border);
+  box-shadow: var(--tp-card-shadow);
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+.tp-fab:hover {
+  background: var(--tp-surface-hover);
+  transform: translateY(-2px);
+}
+.tp-fab-br {
+  right: calc(16px + env(safe-area-inset-right));
+  bottom: calc(20px + env(safe-area-inset-bottom));
+}
+.tp-fab-bl {
+  left: calc(16px + env(safe-area-inset-left));
+  bottom: calc(20px + env(safe-area-inset-bottom));
+}
+
+/* 悬浮按钮进出过渡 */
+.tp-fade-enter-active,
+.tp-fade-leave-active {
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+.tp-fade-enter-from,
+.tp-fade-leave-to {
+  opacity: 0;
+  transform: translateY(8px);
+}
+
+/* 滚动条收窄一点，两种模式下都不突兀 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--tp-scrollbar);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}

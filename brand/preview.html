@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timmy 标志预览</title>
+<style>
+  :root{
+    --brand:#534AB7; --brand-lift:#7F77DD; --accent:#1D9E75;
+    --ink:#1a1a1f; --ink-soft:#6b6b78; --paper:#f6f5f2; --line:#e2e0da;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);
+    font:400 15px/1.7 "Inter","PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+  .wrap{max-width:920px;margin:0 auto;padding:56px 24px 80px}
+  h1{font-size:24px;font-weight:500;margin:0 0 4px;letter-spacing:-.3px}
+  .sub{color:var(--ink-soft);font-size:14px;margin:0 0 48px}
+  h2{font-size:12px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--ink-soft);margin:48px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--line)}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .panel{flex:1 1 260px;border-radius:14px;padding:36px 24px;display:flex;
+    align-items:center;justify-content:center;gap:28px;flex-wrap:wrap}
+  .p-light{background:#ffffff;border:1px solid var(--line);color:var(--ink)}
+  .p-dark{background:#141419;color:#f0efec}
+  .p-brand{background:var(--brand);color:#fff}
+  .ladder{display:flex;align-items:flex-end;gap:28px;flex-wrap:wrap;
+    background:#fff;border:1px solid var(--line);border-radius:14px;padding:32px 24px}
+  .ladder figure{margin:0;text-align:center}
+  .ladder figcaption{margin-top:10px;font-size:12px;color:var(--ink-soft)}
+  .swatches{display:flex;gap:12px;flex-wrap:wrap}
+  .sw{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff;min-width:150px}
+  .sw i{display:block;height:64px}
+  .sw b{display:block;font-weight:500;font-size:13px;padding:10px 12px 2px}
+  .sw span{display:block;font-size:12px;color:var(--ink-soft);padding:0 12px 12px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  @media (prefers-color-scheme:dark){
+    body{background:#101014;color:#eceae4}
+    :root{--line:#2c2c33;--ink-soft:#9a9aa6}
+    .p-light{background:#fff;color:#1a1a1f}
+    .ladder,.sw{background:#1a1a20}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Timmy 标志规范预览</h1>
+  <p class="sub">网页聚合站 · 九宫格 T 主标 + 变体</p>
+
+  <h2>不同背景下的表现</h2>
+  <div class="row">
+    <div class="panel p-light">
+      <svg viewBox="0 0 128 128" width="72" height="72"><rect fill="#534AB7" width="128" height="128" rx="29"/><rect fill="#fff" x="13" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="89" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="13" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="51" width="26" height="26" rx="6.5"/><rect fill="#9FE1CB" fill-opacity=".6" x="89" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="13" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="89" y="89" width="26" height="26" rx="6.5"/></svg>
+      <svg viewBox="0 0 128 128" width="56" height="56" fill="currentColor"><rect x="13" y="13" width="26" height="26" rx="6.5"/><rect x="51" y="13" width="26" height="26" rx="6.5"/><rect x="89" y="13" width="26" height="26" rx="6.5"/><rect x="13" y="51" width="26" height="26" rx="6.5" fill-opacity=".25"/><rect x="51" y="51" width="26" height="26" rx="6.5"/><rect x="89" y="51" width="26" height="26" rx="6.5" fill-opacity=".25"/><rect x="13" y="89" width="26" height="26" rx="6.5" fill-opacity=".25"/><rect x="51" y="89" width="26" height="26" rx="6.5"/><rect x="89" y="89" width="26" height="26" rx="6.5" fill-opacity=".25"/></svg>
+    </div>
+    <div class="panel p-dark">
+      <svg viewBox="0 0 128 128" width="72" height="72"><rect fill="#7F77DD" width="128" height="128" rx="29"/><rect fill="#fff" x="13" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="89" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".26" x="13" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="51" width="26" height="26" rx="6.5"/><rect fill="#9FE1CB" fill-opacity=".7" x="89" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".26" x="13" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".26" x="89" y="89" width="26" height="26" rx="6.5"/></svg>
+      <svg viewBox="0 0 128 128" width="56" height="56" fill="currentColor"><rect x="13" y="13" width="26" height="26" rx="6.5"/><rect x="51" y="13" width="26" height="26" rx="6.5"/><rect x="89" y="13" width="26" height="26" rx="6.5"/><rect x="13" y="51" width="26" height="26" rx="6.5" fill-opacity=".25"/><rect x="51" y="51" width="26" height="26" rx="6.5"/><rect x="89" y="51" width="26" height="26" rx="6.5" fill-opacity=".25"/><rect x="13" y="89" width="26" height="26" rx="6.5" fill-opacity=".25"/><rect x="51" y="89" width="26" height="26" rx="6.5"/><rect x="89" y="89" width="26" height="26" rx="6.5" fill-opacity=".25"/></svg>
+    </div>
+    <div class="panel p-brand">
+      <svg viewBox="0 0 128 128" width="72" height="72" fill="currentColor"><rect x="13" y="13" width="26" height="26" rx="6.5"/><rect x="51" y="13" width="26" height="26" rx="6.5"/><rect x="89" y="13" width="26" height="26" rx="6.5"/><rect x="13" y="51" width="26" height="26" rx="6.5" fill-opacity=".25"/><rect x="51" y="51" width="26" height="26" rx="6.5"/><rect x="89" y="51" width="26" height="26" rx="6.5" fill-opacity=".25"/><rect x="13" y="89" width="26" height="26" rx="6.5" fill-opacity=".25"/><rect x="51" y="89" width="26" height="26" rx="6.5"/><rect x="89" y="89" width="26" height="26" rx="6.5" fill-opacity=".25"/></svg>
+    </div>
+  </div>
+
+  <h2>组合标</h2>
+  <div class="row">
+    <div class="panel p-light">
+      <svg viewBox="0 0 170 56" width="204" height="67"><g transform="scale(0.4375)"><rect fill="#534AB7" width="128" height="128" rx="29"/><rect fill="#fff" x="13" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="89" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="13" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="51" width="26" height="26" rx="6.5"/><rect fill="#9FE1CB" fill-opacity=".6" x="89" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="13" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="89" y="89" width="26" height="26" rx="6.5"/></g><text x="72" y="28" dominant-baseline="central" fill="currentColor" style="font:500 32px/1 Inter,system-ui,sans-serif;letter-spacing:-.5px">timmy</text></svg>
+    </div>
+    <div class="panel p-dark">
+      <svg viewBox="0 0 170 56" width="204" height="67"><g transform="scale(0.4375)"><rect fill="#7F77DD" width="128" height="128" rx="29"/><rect fill="#fff" x="13" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="89" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".26" x="13" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="51" width="26" height="26" rx="6.5"/><rect fill="#9FE1CB" fill-opacity=".7" x="89" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".26" x="13" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".26" x="89" y="89" width="26" height="26" rx="6.5"/></g><text x="72" y="28" dominant-baseline="central" fill="currentColor" style="font:500 32px/1 Inter,system-ui,sans-serif;letter-spacing:-.5px">timmy</text></svg>
+    </div>
+  </div>
+
+  <h2>尺寸阶梯（右侧两个为 favicon 简化版）</h2>
+  <div class="ladder">
+    <figure><svg viewBox="0 0 128 128" width="96" height="96"><rect fill="#534AB7" width="128" height="128" rx="29"/><rect fill="#fff" x="13" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="89" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="13" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="51" width="26" height="26" rx="6.5"/><rect fill="#9FE1CB" fill-opacity=".6" x="89" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="13" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="89" y="89" width="26" height="26" rx="6.5"/></svg><figcaption>96 px</figcaption></figure>
+    <figure><svg viewBox="0 0 128 128" width="48" height="48"><rect fill="#534AB7" width="128" height="128" rx="29"/><rect fill="#fff" x="13" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" x="89" y="13" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="13" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="51" width="26" height="26" rx="6.5"/><rect fill="#9FE1CB" fill-opacity=".6" x="89" y="51" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="13" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" x="51" y="89" width="26" height="26" rx="6.5"/><rect fill="#fff" fill-opacity=".22" x="89" y="89" width="26" height="26" rx="6.5"/></svg><figcaption>48 px</figcaption></figure>
+    <figure><svg viewBox="0 0 128 128" width="32" height="32"><rect fill="#534AB7" width="128" height="128" rx="20"/><rect fill="#fff" x="13" y="16" width="26" height="26" rx="5"/><rect fill="#fff" x="51" y="16" width="26" height="26" rx="5"/><rect fill="#fff" x="89" y="16" width="26" height="26" rx="5"/><rect fill="#fff" x="51" y="51" width="26" height="26" rx="5"/><rect fill="#fff" x="51" y="86" width="26" height="26" rx="5"/></svg><figcaption>32 px</figcaption></figure>
+    <figure><svg viewBox="0 0 128 128" width="16" height="16"><rect fill="#534AB7" width="128" height="128" rx="20"/><rect fill="#fff" x="13" y="16" width="26" height="26" rx="5"/><rect fill="#fff" x="51" y="16" width="26" height="26" rx="5"/><rect fill="#fff" x="89" y="16" width="26" height="26" rx="5"/><rect fill="#fff" x="51" y="51" width="26" height="26" rx="5"/><rect fill="#fff" x="51" y="86" width="26" height="26" rx="5"/></svg><figcaption>16 px</figcaption></figure>
+  </div>
+
+  <h2>色值</h2>
+  <div class="swatches">
+    <div class="sw"><i style="background:#534AB7"></i><b>主色</b><span>#534AB7</span></div>
+    <div class="sw"><i style="background:#7F77DD"></i><b>主色 · 深色模式</b><span>#7F77DD</span></div>
+    <div class="sw"><i style="background:#1D9E75"></i><b>点缀色</b><span>#1D9E75</span></div>
+    <div class="sw"><i style="background:#9FE1CB"></i><b>点缀色 · 浅</b><span>#9FE1CB</span></div>
+  </div>
+
+  <h2>其余两个方案</h2>
+  <div class="row">
+    <div class="panel p-light">
+      <svg viewBox="0 0 120 140" width="60" height="70"><path fill="#534AB7" d="M0 16Q0 0 16 0H104Q120 0 120 16V140L60 102L0 140Z"/><rect fill="#fff" x="22" y="30" width="76" height="16" rx="4"/><rect fill="#fff" x="52" y="30" width="16" height="56" rx="4"/></svg>
+      <svg viewBox="0 0 134 116" width="80" height="69"><circle fill="#534AB7" fill-opacity=".35" cx="9" cy="9" r="9"/><circle fill="#534AB7" fill-opacity=".6" cx="38" cy="9" r="9"/><circle fill="#534AB7" cx="67" cy="9" r="9"/><circle fill="#1D9E75" cx="96" cy="9" r="9"/><circle fill="#534AB7" fill-opacity=".35" cx="125" cy="9" r="9"/><circle fill="#534AB7" cx="67" cy="43" r="9"/><circle fill="#534AB7" fill-opacity=".75" cx="67" cy="72" r="9"/><circle fill="#534AB7" fill-opacity=".5" cx="67" cy="101" r="9"/></svg>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,23 @@
+# Caddy 会自动申请并续期 Let's Encrypt 证书，把域名换成你自己的即可。
+# 用法：把本文件放到 /etc/caddy/Caddyfile，然后 systemctl reload caddy
+
+nav.example.com {
+	encode zstd gzip
+
+	# Go 进程只监听 127.0.0.1:8080，不直接对公网暴露
+	reverse_proxy 127.0.0.1:8080
+
+	header {
+		# 强制 HTTPS 一年，含子域名
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	log {
+		output file /var/log/caddy/timmypanel.log
+		format json
+	}
+}

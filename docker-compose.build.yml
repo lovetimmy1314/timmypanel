@@ -1,0 +1,21 @@
+# 叠加在 docker-compose.yml 上，把「拉现成镜像」换成「本地自己构建」。
+# 日常部署用不到这个文件——镜像由 GitHub Actions 构建推到 GHCR。
+# 应急、或者改了 Dockerfile 想先在本地试的时候：
+#
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml build
+#   docker compose -f docker-compose.yml -f docker-compose.build.yml up -d
+#
+# 打版本号（不给就是 dev）：在上面的 build 命令前加 VERSION=$(date +%Y.%m.%d)
+#
+# 注意这里构建出来的是**单架构**镜像（就是你本机的架构）。要出多架构得用
+# buildx，见 README「多架构」一节；那条路 CI 已经在走了，本地一般不需要。
+
+services:
+  timmypanel:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+      args:
+        VERSION: ${VERSION:-dev}
+    # 盖掉 docker-compose.yml 里的 ghcr.io 地址，免得 up 的时候跑去拉远端镜像
+    image: timmypanel:local

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="32" height="32" role="img" aria-label="Timmy">
+  <title>Timmy</title>
+  <rect fill="#534AB7" x="0" y="0" width="128" height="128" rx="20"/>
+  <rect fill="#FFFFFF" x="13" y="16" width="26" height="26" rx="5"/>
+  <rect fill="#FFFFFF" x="51" y="16" width="26" height="26" rx="5"/>
+  <rect fill="#FFFFFF" x="89" y="16" width="26" height="26" rx="5"/>
+  <rect fill="#FFFFFF" x="51" y="51" width="26" height="26" rx="5"/>
+  <rect fill="#FFFFFF" x="51" y="86" width="26" height="26" rx="5"/>
+</svg>

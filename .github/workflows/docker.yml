@@ -1,0 +1,73 @@
+name: 构建并推送镜像
+
+# 推 main 出 latest，推 v* tag 出对应版本号。手动也能跑。
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # 推 GHCR 靠自带的 GITHUB_TOKEN，不用另配 secret
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # 只有最后那个 alpine 阶段跑在目标架构上（apk add / adduser / chown），
+      # 需要模拟。前端和 Go 都在 BUILDPLATFORM 上交叉编译，见 deploy/Dockerfile。
+      - name: 装 QEMU（只给 arm64 的 alpine 阶段用）
+        uses: docker/setup-qemu-action@v3
+
+      - name: 装 buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: 登录 GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 打进二进制的版本号（-version 会打印它）。tag 构建取 tag 名去掉 v，
+      # 日常 main 构建取「日期-短 sha」，日期部分和 build.ps1 的默认值同形。
+      - name: 定版本号
+        id: ver
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "value=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=$(date +%Y.%m.%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 算镜像 tag
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 构建并推送
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VERSION=${{ steps.ver.outputs.value }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

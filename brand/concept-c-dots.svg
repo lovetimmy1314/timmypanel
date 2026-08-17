@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 134 116" width="134" height="116" role="img" aria-label="Timmy">
+  <title>Timmy</title>
+  <style>
+    .p { fill: #534AB7 }
+    @media (prefers-color-scheme: dark) { .p { fill: #7F77DD } }
+  </style>
+  <circle class="p" cx="9" cy="9" r="9" fill-opacity=".35"/>
+  <circle class="p" cx="38" cy="9" r="9" fill-opacity=".6"/>
+  <circle class="p" cx="67" cy="9" r="9"/>
+  <circle cx="96" cy="9" r="9" fill="#1D9E75"/>
+  <circle class="p" cx="125" cy="9" r="9" fill-opacity=".35"/>
+  <circle class="p" cx="67" cy="43" r="9"/>
+  <circle class="p" cx="67" cy="72" r="9" fill-opacity=".75"/>
+  <circle class="p" cx="67" cy="101" r="9" fill-opacity=".5"/>
+</svg>

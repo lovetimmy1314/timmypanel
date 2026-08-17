@@ -1,0 +1,33 @@
+[Unit]
+Description=Timmypanel 网址导航
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=timmypanel
+Group=timmypanel
+WorkingDirectory=/opt/timmypanel
+ExecStart=/opt/timmypanel/timmypanel -config /opt/timmypanel/data/config.yaml
+Restart=always
+RestartSec=3
+
+# 只允许读写自己的数据目录，其余文件系统只读，降低被打穿后的影响面
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/timmypanel/data
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+
+# 只需要出站抓图标 + 监听本地端口
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
