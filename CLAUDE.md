@@ -252,6 +252,9 @@ color/gradient 走 `safeCSSColor`（只允许颜色和渐变函数用得到的�
 
 - `build.ps1` 存的是 **UTF-8 with BOM**。Windows PowerShell 5.1 按 ANSI 读 `.ps1`，
   没 BOM 会把中文注释读成乱码并导致解析失败。用编辑工具改这个文件后要确认 BOM 还在。
+- `deploy/update.sh` 这类 `.sh` **恰恰相反：不能有 BOM**——`sh` 会把 BOM 当成命令，
+  第一行就报错。三个脚本三种要求（`.ps1` 要 BOM、`.bat` 只能 ASCII、`.sh` 不能有 BOM），
+  别记混。行尾由 `.gitattributes` 管，不用手动操心。
 - `build.bat`（`build.ps1` 的双击入口）**只能用 ASCII**，一个中文字都不能有。
   `cmd.exe` 按**控制台代码页**读 `.bat`：PowerShell 里是 65001，普通 cmd 窗口是 936。
   同一份中文在两种代码页下解出的字符数不同，cmd 又按字节偏移往下读，于是从注释里

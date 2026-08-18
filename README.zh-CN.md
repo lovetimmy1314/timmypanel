@@ -68,6 +68,16 @@ docker compose logs timmypanel     # 生成的初始管理员密码在这里
 docker compose pull && docker compose up -d
 ```
 
+嫌两条命令麻烦、或者两种跑法混着用，[`deploy/update.sh`](deploy/update.sh) 把升级收成一条：
+它自己看当前目录有没有 compose 文件，没有就按下面那条 `docker run` 重建容器，
+完事顺手清掉换下来的旧镜像。
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/lovetimmy1314/timmypanel/main/deploy/update.sh
+chmod +x update.sh
+./update.sh
+```
+
 几个要知道的点：
 
 - `latest` 跟的是 `main` 的最新提交，不是最新的 release。想钉死版本：
@@ -110,8 +120,15 @@ docker network inspect bridge -f '{{(index .IPAM.Config 0).Gateway}}'
 要相应改名）；升级是「重建容器」，数据在卷里所以不会丢：
 
 ```bash
+./update.sh     # 上面那个脚本，在没有 compose 文件的目录里跑就走这条路
+```
+
+手工做是三步。注意用 `stop` 而不是 `rm -f`：后者直接发 SIGKILL，后端那 10 秒 drain
+和 sqlite 的收尾都跑不到。
+
+```bash
 docker pull ghcr.io/lovetimmy1314/timmypanel:latest
-docker rm -f timmypanel
+docker stop -t 30 timmypanel && docker rm timmypanel
 # 然后重新执行上面那条 docker run
 ```
 
@@ -271,7 +288,7 @@ Timmypanel/
 │       └── web/        embed 进来的前端产物
 ├── frontend/           Vue 3 + TypeScript + Vite + Naive UI + Tailwind
 ├── brand/              标志源文件（SVG 各变体 + 预览页）
-├── deploy/             systemd unit、Caddyfile、Dockerfile
+├── deploy/             systemd unit、Caddyfile、Dockerfile、update.sh
 ├── docs/               编码约定、决策记录、计划
 └── data/               运行时生成：config.yaml、sqlite、uploads、backups
 ```

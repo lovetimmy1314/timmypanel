@@ -81,6 +81,17 @@ Upgrading keeps your data (it lives in the named volume `timmypanel_timmypanel-d
 docker compose pull && docker compose up -d
 ```
 
+Two commands too many, or juggling both deployment styles? [`deploy/update.sh`](deploy/update.sh)
+collapses the upgrade into one: it checks whether the current directory has a compose file, falls
+back to recreating the container the `docker run` way when it does not, and cleans up the image it
+replaced.
+
+```bash
+curl -fsSLO https://raw.githubusercontent.com/lovetimmy1314/timmypanel/main/deploy/update.sh
+chmod +x update.sh
+./update.sh
+```
+
 A few things worth knowing:
 
 - `latest` tracks the tip of `main`, not the newest release. Pin a version with
@@ -125,8 +136,15 @@ prefix (adjust the backup command above accordingly), and upgrading is a recreat
 survives because it lives in the volume, not the container:
 
 ```bash
+./update.sh     # the script above; with no compose file around it takes this path
+```
+
+By hand it is three steps. Use `stop`, not `rm -f`: the latter sends SIGKILL immediately, skipping
+the backend's 10-second drain and SQLite's cleanup.
+
+```bash
 docker pull ghcr.io/lovetimmy1314/timmypanel:latest
-docker rm -f timmypanel
+docker stop -t 30 timmypanel && docker rm timmypanel
 # then re-run the `docker run` above
 ```
 
@@ -290,7 +308,7 @@ Timmypanel/
 │       └── web/        the embedded frontend build
 ├── frontend/           Vue 3 + TypeScript + Vite + Naive UI + Tailwind
 ├── brand/              logo sources (SVG variants + preview page)
-├── deploy/             systemd unit, Caddyfile, Dockerfile
+├── deploy/             systemd unit, Caddyfile, Dockerfile, update.sh
 ├── docs/               conventions, decision records, roadmap
 └── data/               created at runtime: config.yaml, SQLite, uploads, backups
 ```
