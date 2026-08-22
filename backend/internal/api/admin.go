@@ -185,7 +185,7 @@ func (s *Server) handleAdminDeleteUser(c *gin.Context) {
 	}
 
 	err = s.db.Transaction(func(tx *gorm.DB) error {
-		for _, m := range []any{&model.Site{}, &model.Group{}, &model.Setting{}, &model.Upload{}, &model.Session{}} {
+		for _, m := range []any{&model.Site{}, &model.Group{}, &model.Setting{}, &model.Upload{}, &model.Session{}, &model.IngestToken{}} {
 			if err := tx.Where("user_id = ?", uid).Delete(m).Error; err != nil {
 				return err
 			}

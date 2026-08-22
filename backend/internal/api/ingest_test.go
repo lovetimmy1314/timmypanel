@@ -1,8 +1,11 @@
 package api
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
+
+	"timmypanel/internal/model"
 )
 
 // 令牌的安全前提是「原文只存在于书签里，库里只有哈希」，
@@ -63,5 +66,54 @@ func TestIngestQueueSetEmptyClears(t *testing.T) {
 	q.set(1, nil)
 	if got := q.list(1); len(got) != 0 {
 		t.Errorf("set 空之后队列应为空，实际 %v", got)
+	}
+}
+
+func TestLookupIngestUIDRejectsDisabledAndDeleted(t *testing.T) {
+	db, err := model.Open(filepath.Join(t.TempDir(), "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = sqlDB.Close() })
+	s := &Server{db: db}
+
+	u := model.User{Username: "alice", PasswordHash: "x", Nickname: "alice", Role: model.RoleUser}
+	if err := db.Create(&u).Error; err != nil {
+		t.Fatal(err)
+	}
+	token, err := newIngestToken()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&model.IngestToken{UserID: u.ID, TokenHash: hashIngestToken(token)}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	if uid, ok := s.lookupIngestUID(token); !ok || uid != u.ID {
+		t.Fatalf("正常账号应通过, ok=%v uid=%d", ok, uid)
+	}
+	if _, ok := s.lookupIngestUID("tpk_" + "00"); ok {
+		t.Fatal("错误令牌不应通过")
+	}
+
+	if err := db.Model(&u).Update("disabled", true).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := s.lookupIngestUID(token); ok {
+		t.Fatal("停用账号的令牌仍有效")
+	}
+
+	if err := db.Model(&u).Update("disabled", false).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Delete(&model.User{}, u.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := s.lookupIngestUID(token); ok {
+		t.Fatal("已删除账号的令牌仍有效")
 	}
 }

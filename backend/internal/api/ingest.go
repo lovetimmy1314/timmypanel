@@ -114,7 +114,13 @@ func (s *Server) lookupIngestUID(token string) (uint, bool) {
 	if res.Error != nil || res.RowsAffected == 0 {
 		return 0, false
 	}
-	return row.UserID, true
+	// 令牌行还在不等于账号还在：删用户当初漏了 ingest_tokens，停用也只踢会话。
+	// 这里跟 session.Validate 对齐，不存在或已停用都当令牌无效。
+	var u model.User
+	if err := s.db.Select("id", "disabled").First(&u, row.UserID).Error; err != nil || u.Disabled {
+		return 0, false
+	}
+	return u.ID, true
 }
 
 // ---- 令牌管理（走会话，CSRF 组内）----
