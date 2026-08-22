@@ -5,7 +5,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api } from '@/api/http'
 import { deepClone } from '@/utils/clone'
-import { setLocale } from '@/i18n'
+import { setLocale, t } from '@/i18n'
 import type { Group, Settings, Site } from '@/api/types'
 
 const DEFAULT_SETTINGS: Settings = {
@@ -48,7 +48,7 @@ export const usePanelStore = defineStore('panel', () => {
     const out = groups.value.map((g) => ({ group: g, sites: buckets.get(g.id) ?? [] }))
     const loose = buckets.get(0) ?? []
     if (loose.length) {
-      out.push({ group: { id: 0, name: '未分组', sort: 9999, collapsed: false }, sites: loose })
+      out.push({ group: { id: 0, name: t('common.ungrouped'), sort: 9999, collapsed: false }, sites: loose })
     }
     return out
   })

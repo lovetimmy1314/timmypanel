@@ -24,6 +24,13 @@ const href = computed(() =>
 const usingLan = computed(() => props.network === 'lan' && !!props.site.lanUrl)
 
 const iconFailed = ref(false)
+// 组件按 site.id 复用：旧图 404 之后换新地址，不把这个标志清掉会一直显示文字色块。
+watch(
+  () => [props.site.iconValue, props.site.iconType] as const,
+  () => {
+    iconFailed.value = false
+  },
+)
 
 // 图标库类型的卡片才需要整份 mdi（3MB，见 src/icons/index.ts）。
 // 只有图片和文字图标的账号一辈子不会下载它。
