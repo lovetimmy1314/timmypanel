@@ -45,7 +45,12 @@ async function submit() {
   try {
     await store.login(username.value, password.value, remember.value)
     const redirect = route.query.redirect
-    router.replace(typeof redirect === 'string' && redirect.startsWith('/') ? redirect : '/')
+    const safe =
+      typeof redirect === 'string' &&
+      redirect.startsWith('/') &&
+      !redirect.startsWith('//') &&
+      !redirect.startsWith('/\\')
+    router.replace(safe ? redirect : '/')
   } catch (e) {
     message.error(e instanceof ApiError ? e.message : t('login.failed'))
   } finally {
