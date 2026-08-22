@@ -178,7 +178,7 @@ auth:
   initial_admin:
     username: admin
     password: ...            # only used while the database has no users at all
-  allow_register: false      # keep false on the public internet; admins create accounts
+  allow_register: false      # reserved; registration is not implemented (admins create accounts)
 fetch:
   allow_private: false       # allow fetching icons from private IPs (off by default)
   timeout_sec: 8

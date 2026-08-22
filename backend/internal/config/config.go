@@ -45,7 +45,8 @@ type Config struct {
 			Username string `yaml:"username"`
 			Password string `yaml:"password"`
 		} `yaml:"initial_admin"`
-		// 是否开放注册。公网部署建议保持 false。
+		// 预留：开放注册。当前版本没有注册接口，改成 true 也不会出现入口；
+		// 账号仍由管理员在后台创建。公网请保持 false。
 		AllowRegister bool `yaml:"allow_register"`
 	} `yaml:"auth"`
 

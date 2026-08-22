@@ -178,7 +178,7 @@ auth:
   initial_admin:
     username: admin
     password: ...            # 只在库里还一个用户都没有时才用得上
-  allow_register: false      # 公网请保持 false，账号由管理员在后台创建
+  allow_register: false      # 预留，注册尚未实现；账号由管理员在后台创建
 fetch:
   allow_private: false       # 是否允许抓取内网地址的图标（默认关）
   timeout_sec: 8

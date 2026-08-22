@@ -268,4 +268,4 @@ color/gradient 走 `safeCSSColor`（只允许颜色和渐变函数用得到的�
 
 `data/config.yaml` 里 `server.secure: true`（否则会话 Cookie 不带 Secure）、
 `server.trusted_proxies: ["127.0.0.1"]`（否则登录限流会被伪造的 `X-Forwarded-For` 绕过）、
-`auth.allow_register` 保持 `false`。`server.listen` 保持 `127.0.0.1:8080`，由 Caddy 对外。
+`auth.allow_register` 保持 `false`（此字段是预留，当前没有注册接口）。`server.listen` 保持 `127.0.0.1:8080`，由 Caddy 对外。
