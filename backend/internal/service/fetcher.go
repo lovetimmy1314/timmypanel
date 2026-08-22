@@ -11,11 +11,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -619,6 +621,15 @@ func ForEachLimited(n, limit int, fn func(i int)) {
 		go func(i int) {
 			defer wg.Done()
 			defer func() { <-sem }()
+			// worker 跑在请求 goroutine 之外，gin.Recovery() 够不着——不兜住的话
+			// 一次 panic 就是整个进程退出，而批量导入后的补抓还是从后台 goroutine
+			// 进来的，连个能报错的请求都没有。defer 是 LIFO，这条最后注册、最先跑。
+			defer func() {
+				if r := recover(); r != nil {
+					slog.Error("并发任务 panic，已跳过这一条",
+						"index", i, "err", r, "stack", string(debug.Stack()))
+				}
+			}()
 			fn(i)
 		}(i)
 	}

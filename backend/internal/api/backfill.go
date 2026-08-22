@@ -6,6 +6,7 @@ package api
 import (
 	"fmt"
 	"log/slog"
+	"runtime/debug"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -215,6 +216,14 @@ func (s *Server) handleBackfillSites(c *gin.Context) {
 // 这里三项全补、不覆盖已有值，和手动补全共用 backfillSite，免得两条路径的
 // 「什么算空、什么该覆盖」慢慢长歪。
 func (s *Server) backfillIcons(uid uint, sites []model.Site) {
+	// 这是 go 出去的后台任务，panic 没人接：gin.Recovery() 只管请求 goroutine，
+	// 崩了是整个进程退出。ForEachLimited 里的 worker 各自也有一层，
+	// 这一层管的是循环本身。
+	defer func() {
+		if r := recover(); r != nil {
+			slog.Error("后台补抓元信息 panic", "uid", uid, "err", r, "stack", string(debug.Stack()))
+		}
+	}()
 	fields := backfillFields{Icon: true, Title: true, Description: true}
 	service.ForEachLimited(len(sites), backfillConcurrency, func(i int) {
 		site := sites[i]

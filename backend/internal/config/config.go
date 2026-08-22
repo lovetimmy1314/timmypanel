@@ -8,6 +8,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -140,9 +141,7 @@ func (c *Config) applyEnv() {
 	if v := os.Getenv("TP_LISTEN"); v != "" {
 		c.Server.Listen = v
 	}
-	if v := os.Getenv("TP_SECURE"); v != "" {
-		c.Server.Secure, _ = strconv.ParseBool(v)
-	}
+	c.Server.Secure = envBool("TP_SECURE", c.Server.Secure)
 	if v := os.Getenv("TP_DATA_DIR"); v != "" {
 		c.Data.Dir = v
 	}
@@ -160,9 +159,27 @@ func (c *Config) applyEnv() {
 	if v := os.Getenv("TP_ADMIN_PASSWORD"); v != "" {
 		c.Auth.InitialAdmin.Password = v
 	}
-	if v := os.Getenv("TP_ALLOW_PRIVATE_FETCH"); v != "" {
-		c.Fetch.AllowPrivate, _ = strconv.ParseBool(v)
+	c.Fetch.AllowPrivate = envBool("TP_ALLOW_PRIVATE_FETCH", c.Fetch.AllowPrivate)
+}
+
+// envBool 读一个布尔环境变量：没设就沿用 cur，设了但解析不出来也沿用 cur 并告警。
+//
+// 不能像原来那样 `c.X, _ = strconv.ParseBool(v)` 把错误丢掉——ParseBool 只认
+// 1/t/T/TRUE/true/True 那一组，`TP_SECURE=yes` 或 `=on` 都会失败，
+// 而失败的零值是 false，等于**静默关掉**会话 Cookie 的 Secure 标记。
+// 这一项恰恰是公网部署明确要求打开的，配错了却一点提示都没有。
+func envBool(key string, cur bool) bool {
+	v := strings.TrimSpace(os.Getenv(key))
+	if v == "" {
+		return cur
 	}
+	b, err := strconv.ParseBool(v)
+	if err != nil {
+		slog.Warn("环境变量不是合法的布尔值，已忽略该项",
+			"key", key, "value", v, "沿用", cur, "可用写法", "true/false/1/0")
+		return cur
+	}
+	return b
 }
 
 func (c *Config) normalize() {

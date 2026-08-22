@@ -10,6 +10,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -400,5 +401,29 @@ func TestSaveFirstIconSkipsBadCandidates(t *testing.T) {
 	// 全都不可用时要如实报错，不能返回一个空的 SavedIcon。
 	if _, err := f.SaveFirstIcon(t.TempDir(), 1, []string{srv.URL + "/a", srv.URL + "/b"}); err == nil {
 		t.Error("候选全失败时应返回错误")
+	}
+}
+
+// ForEachLimited 的 worker 跑在请求 goroutine 之外，gin.Recovery() 够不着——
+// 少了那层 recover，一条 panic 就是整个进程退出（这个测试会直接崩掉，
+// 而不是报 FAIL）。其余任务必须照跑完。
+func TestForEachLimitedRecoversPanic(t *testing.T) {
+	var mu sync.Mutex
+	done := make([]bool, 5)
+	ForEachLimited(5, 2, func(i int) {
+		if i == 2 {
+			panic("故意的")
+		}
+		mu.Lock()
+		defer mu.Unlock()
+		done[i] = true
+	})
+	for i, ok := range done {
+		if i == 2 {
+			continue
+		}
+		if !ok {
+			t.Errorf("第 %d 条没跑完，panic 把整批带偏了", i)
+		}
 	}
 }

@@ -189,6 +189,8 @@ backup:
 
 和部署有关的项也能用环境变量覆盖：`TP_LISTEN`、`TP_SECURE`、`TP_DATA_DIR`、`TP_TRUSTED_PROXIES`（逗号分隔）、`TP_SECRET`、`TP_ADMIN_USER`、`TP_ADMIN_PASSWORD`、`TP_ALLOW_PRIVATE_FETCH`。
 
+其中两个布尔项（`TP_SECURE`、`TP_ALLOW_PRIVATE_FETCH`）**只认** `true` / `false` / `1` / `0`。写成 `yes`、`on` 之类会被忽略并在日志里告警，配置文件里的值原样保留——不会因为拼错就把 `TP_SECURE` 静默关掉。
+
 命令行参数：`-config <路径>`、`-debug`、`-version`、`-reset-password <用户名>`。
 
 ## 忘记管理员密码

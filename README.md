@@ -189,6 +189,8 @@ backup:
 
 Deployment-related values can also be set with environment variables: `TP_LISTEN`, `TP_SECURE`, `TP_DATA_DIR`, `TP_TRUSTED_PROXIES` (comma separated), `TP_SECRET`, `TP_ADMIN_USER`, `TP_ADMIN_PASSWORD`, `TP_ALLOW_PRIVATE_FETCH`.
 
+The two boolean ones (`TP_SECURE`, `TP_ALLOW_PRIVATE_FETCH`) only accept `true` / `false` / `1` / `0`. Anything else (`yes`, `on`, …) is ignored with a warning in the log and the value from the config file is kept — a typo will never silently turn `TP_SECURE` off.
+
 CLI flags: `-config <path>`, `-debug`, `-version`, `-reset-password <username>`.
 
 ## Forgot the admin password
