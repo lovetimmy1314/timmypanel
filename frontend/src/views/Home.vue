@@ -63,8 +63,8 @@ watch(
 
 // 可拖拽的前提是渲染的就是 boards 里那个数组本身。filter 会产生新数组，
 // 拖拽结果只会写进这个临时数组，persistSiteOrder(boards) 拿到的还是旧顺序 ——
-// 表现为拖完看着对了，刷新就打回原形。所以能拖的时候直接返回源数组：
-// 编辑模式（全局或分组级）下 hidden 本就不过滤，再没有搜索词，这一趟 filter 是恒等的。
+// 表现为拖完看着对了，刷新就打回原形。所以能拖的那一组必须返回源数组。
+// 全局编辑要看见 hidden（才能改）；分组级编辑只露正在编的那一组，别的组仍过滤 hidden。
 const canDrag = computed(() => (editing.value || groupEditing.value !== null) && !query.value.trim())
 const boardCanDrag = (groupId: number) => canDrag.value && isBoardEditing(groupId)
 // 全局编辑下各组共用一个拖拽组名（可跨组）；分组级编辑下每组一个独立名字，
@@ -72,8 +72,15 @@ const boardCanDrag = (groupId: number) => canDrag.value && isBoardEditing(groupI
 const dragGroup = (groupId: number) => (editing.value ? 'sites' : `sites-${groupId}`)
 
 const visibleBoards = computed(() => {
-  if (canDrag.value) return boards.value
   const q = query.value.trim().toLowerCase()
+  if (!q && editing.value) return boards.value
+  if (!q && groupEditing.value !== null) {
+    return boards.value.map((b) =>
+      b.group.id === groupEditing.value
+        ? b
+        : { group: b.group, sites: b.sites.filter((s) => !s.hidden) },
+    )
+  }
   return boards.value
     .map((b) => ({
       group: b.group,
@@ -151,8 +158,12 @@ async function setDefaultEngine(name: string) {
 // ---- 内外网切换 ----
 async function toggleNetwork() {
   const next = panel.settings.network === 'lan' ? 'wan' : 'lan'
-  await panel.patchSettings({ network: next })
-  message.success(next === 'lan' ? t('home.switchedLan') : t('home.switchedWan'))
+  try {
+    await panel.patchSettings({ network: next })
+    message.success(next === 'lan' ? t('home.switchedLan') : t('home.switchedWan'))
+  } catch (e: any) {
+    message.error(e?.message ?? t('common.saveFailed'))
+  }
 }
 
 // ---- 明暗与语言 ----
