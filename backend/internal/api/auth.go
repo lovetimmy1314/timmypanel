@@ -4,6 +4,8 @@
 package api
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"strconv"
 	"strings"
@@ -21,6 +23,23 @@ type loginReq struct {
 	Password string `json:"password"`
 	Remember bool   `json:"remember"`
 }
+
+// dummyPasswordHash 是一串随机密码的 bcrypt 哈希，专门用来在「用户不存在」时
+// 也跑一次比对，把这条路径的耗时对齐到「用户存在但密码错」那一档（决策 031）。
+// 不这么做的话，err != nil || bcrypt.Compare(...) 会短路掉 bcrypt，
+// 两条路径差两个数量级，统一错误文案就白做了。
+// 用当前的 BcryptCost 现算而不是写死一串常量：cost 以后调了，假比对的耗时要跟着走。
+var dummyPasswordHash = func() []byte {
+	b := make([]byte, 32)
+	if _, err := rand.Read(b); err != nil {
+		panic(err)
+	}
+	h, err := bcrypt.GenerateFromPassword([]byte(hex.EncodeToString(b)), model.BcryptCost)
+	if err != nil {
+		panic(err)
+	}
+	return h
+}()
 
 type userDTO struct {
 	ID       uint   `json:"id"`
@@ -61,7 +80,14 @@ func (s *Server) handleLogin(c *gin.Context) {
 
 	var u model.User
 	err := s.db.Where("username = ?", req.Username).First(&u).Error
-	if err != nil || bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(req.Password)) != nil {
+	// 查不到用户也要照跑一次 bcrypt，否则耗时本身就把「这个用户名存在吗」答了。
+	// 结果先算出来再判断，不能写成 err != nil || bcrypt...：那样又短路了。
+	storedHash := dummyPasswordHash
+	if err == nil {
+		storedHash = []byte(u.PasswordHash)
+	}
+	passwordOK := bcrypt.CompareHashAndPassword(storedHash, []byte(req.Password)) == nil
+	if err != nil || !passwordOK {
 		s.limiter.Fail(ipKey)
 		s.limiter.Fail(userKey)
 		// 不区分“用户不存在”和“密码错误”，避免枚举账号。

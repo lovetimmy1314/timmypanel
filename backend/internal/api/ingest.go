@@ -7,7 +7,9 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
+	"net/http"
 	"strings"
 	"sync"
 
@@ -37,6 +39,15 @@ const ingestTokenPrefix = "tpk_"
 // maxIngestQueue 是「浏览器逐个补」队列的长度上限。队列在内存里，本意是
 // 兜底批量补全的失败长尾，真到这个量级该考虑别的方式了。
 const maxIngestQueue = 100
+
+// maxIngestBodyBytes 是这个端点的请求体硬上限。图标本身上限 1MB
+// （service.maxIconBytes），留一倍给表单字段和 multipart 分隔符。
+//
+// 这个上限不是为了拦大图，是为了拦**没有令牌的**请求：它是全站唯一不走会话的
+// 写端点，而 c.PostForm 会先触发 ParseMultipartForm(MaxMultipartMemory=16MB)，
+// 也就是说鉴权之前 body 就已经被读进内存了。不钉死上限，随便谁都能靠并发
+// 大 body 把内存吃掉（决策 031）。
+const maxIngestBodyBytes = 2 << 20
 
 // ingestQueues 按 uid 存待补 URL 队列（canonical 形式）。进程内存即可：
 // 队列是「这一轮补全」的临时状态，重启丢了只是少个便利，不丢数据。
@@ -238,6 +249,22 @@ func (s *Server) handleIngest(c *gin.Context) {
 		fail(c, 429, "尝试次数过多，请稍后再试")
 		return
 	}
+	// 上限要在**碰表单之前**钉死，因为 c.PostForm 那一下就会把 body 读完。
+	// 顺序也不能换到限流前面：锁定中的 IP 连解析都不该走到。
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, maxIngestBodyBytes)
+	// 书签有两种发法：带图标字节时是 multipart，只发 iconUrl 时是 urlencoded。
+	// 后者会让 ParseMultipartForm 回 ErrNotMultipart，但表单在那之前已经解析好了，
+	// 所以这不算错。gin 的 c.PostForm 会把这里的错误吞掉，得自己判一次。
+	if err := c.Request.ParseMultipartForm(maxIngestBodyBytes); err != nil && !errors.Is(err, http.ErrNotMultipart) {
+		var tooLarge *http.MaxBytesError
+		if errors.As(err, &tooLarge) {
+			fail(c, http.StatusRequestEntityTooLarge, "提交内容过大，图标请控制在 1MB 以内")
+			return
+		}
+		badRequest(c, "表单解析失败")
+		return
+	}
+
 	uid, valid := s.lookupIngestUID(strings.TrimSpace(c.PostForm("token")))
 	if !valid {
 		// 错误令牌按 IP 限流：令牌 64 位 hex 本身枚举不动，限流防的是

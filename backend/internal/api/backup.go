@@ -342,6 +342,10 @@ const (
 	maxBackupJSONBytes  = 32 << 20
 	maxBackupAssetBytes = 8 << 20
 	maxBackupAssets     = 500
+	// maxBackupAssetTotal 是所有图片解压后的**累计**上限。只卡单张和张数不够：
+	// 500 × 8MB = 4GB，而 assets 是全攒在内存里等着还原的，一个高压缩比的
+	// zip（本身还没到 64MB 的上传上限）就能把内存打爆（决策 031）。
+	maxBackupAssetTotal = 64 << 20
 )
 
 // readBackupPayload 支持三种上传方式：JSON body、上传 .json 文件、上传 .zip 备份包。
@@ -378,6 +382,7 @@ func (s *Server) readBackupPayload(c *gin.Context, bf *BackupFile) ([]backupAsse
 func readBackupZip(zr *zip.Reader, bf *BackupFile) ([]backupAsset, error) {
 	var assets []backupAsset
 	var foundJSON bool
+	var totalBytes int64
 	for _, entry := range zr.File {
 		name := path.Clean("/" + strings.ReplaceAll(entry.Name, `\`, "/"))
 		name = strings.TrimPrefix(name, "/")
@@ -420,6 +425,12 @@ func readBackupZip(zr *zip.Reader, bf *BackupFile) ([]backupAsset, error) {
 		if int64(len(data)) > maxBackupAssetBytes {
 			slog.Warn("备份里的图片过大，已跳过", "name", name)
 			continue
+		}
+		// 按**实际读到的**字节数记账，不能信 UncompressedSize64——那是 zip 自己
+		// 声明的，可以随便写。上面那个 LimitReader 保证了单张不超，这里保证总量不超。
+		totalBytes += int64(len(data))
+		if totalBytes > maxBackupAssetTotal {
+			return nil, fmt.Errorf("zip 里的图片解压后超过 %dMB", maxBackupAssetTotal>>20)
 		}
 		assets = append(assets, backupAsset{Rel: rel, Data: data})
 	}

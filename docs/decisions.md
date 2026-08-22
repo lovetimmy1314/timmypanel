@@ -59,3 +59,50 @@
 脚本必须**自包含**：VPS 上没有仓库（README 的快速开始只 `curl` 了一个 `docker-compose.yml`），
 所以它不能引用 `deploy/` 下的其他文件，`docker run` 那条路的参数只能在脚本里再写一份——
 改 README 的 run 命令时记得同步改脚本，反之亦然。
+
+## 031 鉴权之前的成本和耗时，一律钉死
+
+状态：生效。相关：`backend/internal/api/auth.go`、`backend/internal/api/ingest.go`、
+`backend/internal/api/backup.go`。
+
+三处问题同一个形状：**在确认调用方是谁之前，服务器就已经付出了可观测的代价**——
+要么是时间（能被拿来问问题），要么是内存（能被拿来打垮进程）。
+
+**登录耗时对齐。** `handleLogin` 原来写的是
+`if err != nil || bcrypt.CompareHashAndPassword(...) != nil`。Go 的 `||` 短路，
+用户查不到时 bcrypt 根本不跑。实测：`admin` + 错密码 0.20s，`nosuchuser` + 错密码
+0.0007s，差 200 倍。错误文案统一成「用户名或密码错误」这件事因此完全白做——
+不用看 body，掐表就知道哪些用户名存在。改成先算 `passwordOK` 再判断，查不到用户时
+拿 `dummyPasswordHash`（进程启动时用当前 `BcryptCost` 现算的一串随机密码哈希）走一遍。
+修完实测两条路径都是 0.199s。
+
+- 代价一：**每次登录尝试都必然烧一次 bcrypt**，包括纯粹瞎猜用户名的。cost 12 约 200ms
+  CPU，这让登录接口成了更贵的 DoS 面。靠现有的 `LoginLimiter`（5 次/15 分钟，IP 和
+  用户名各限一路）压住，没有再加东西。
+- 代价二：`dummyPasswordHash` 在包初始化时算，二进制启动多花约 200ms。选现算而不是
+  写死一串常量，是为了 `BcryptCost` 以后调了假比对能跟着走——写死就会重新裂开。
+- **没有解决的**：换 IP 慢速枚举依然可行（每个 IP 5 次）。真堵死要上验证码或全局限流，
+  一个自用导航站不值当。这一条只是把「零成本、无限次」的旁路降回和暴力破解同一档。
+
+**ingest 端点的请求体上限。** `POST /api/v1/ingest` 是全站唯一不走会话的写端点
+（决策 026），而 `c.PostForm("token")` 那一下就会触发
+`ParseMultipartForm(MaxMultipartMemory)`——`main.go` 里设的是 16MB。也就是说
+**令牌校验之前** body 已经被读进内存了，无令牌的请求照样能让每条连接吃掉 16MB。
+现在在限流之后、碰表单之前套 `http.MaxBytesReader(2MB)`，并显式
+`ParseMultipartForm` 一次把错误捞出来（gin 的 `c.PostForm` 会把它吞掉）。
+
+- 2MB = 图标上限 1MB 的一倍，余量给表单字段和 multipart 分隔符。
+- 必须放在限流**之后**：锁定中的 IP 连解析都不该走到。
+- 书签有两种发法，urlencoded（只带 iconUrl）会让 `ParseMultipartForm` 回
+  `ErrNotMultipart`，但表单在那之前已经由 `ParseForm` 解析好了，所以这个错误要放行。
+  两条路径都实测过：200；5MB 的 body 回 413。
+- 代价：图标超过 1MB 的站点，书签这条路会直接 413 而不是像以前那样静默丢图标。
+  文案里写清了 1MB 这个数。
+
+**备份 zip 的累计解压上限。** `readBackupZip` 原来只卡单张 8MB 和总张数 500，
+但 assets 是全攒在内存里等着还原的，500 × 8MB = 4GB——一个还没到 64MB 上传上限的
+高压缩比 zip 就能把内存打爆。加 `maxBackupAssetTotal`(64MB) 按**实际读到的字节数**
+累计，超了直接报错。按实际读到的记，不按 `UncompressedSize64`：那是 zip 自己声明的，
+可以随便写。
+
+- 代价：图片总量超过 64MB 的备份包导不进来，得先删点图。这个量级的个人导航站不存在。
