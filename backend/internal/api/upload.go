@@ -78,15 +78,31 @@ func (s *Server) handleUpload(c *gin.Context) {
 		return
 	}
 	name := randomName() + ext
-	dst, err := os.Create(filepath.Join(dir, name))
+	dstPath := filepath.Join(dir, name)
+	dst, err := os.Create(dstPath)
 	if err != nil {
 		serverError(c, err)
 		return
 	}
-	defer dst.Close()
+	// 中途任何一步失败都要把这个半截文件删掉。留着的话 uploads 下会攒一批
+	// 库里没有 Upload 记录的孤儿：图库看不到、备份不打包、删文件的接口也够不着，
+	// 只有整个删账号时才会跟着 RemoveAll 一起没。
+	committed := false
+	defer func() {
+		dst.Close()
+		if !committed {
+			_ = os.Remove(dstPath)
+		}
+	}()
 
 	written, err := io.Copy(dst, io.LimitReader(f, maxUploadBytes))
 	if err != nil {
+		serverError(c, err)
+		return
+	}
+	// Close 的错误不能吞：写盘出错（盘满之类）常常拖到这一下才暴露出来，
+	// 而这时候 io.Copy 已经报成功了。
+	if err := dst.Close(); err != nil {
 		serverError(c, err)
 		return
 	}
@@ -96,6 +112,7 @@ func (s *Server) handleUpload(c *gin.Context) {
 		serverError(c, err)
 		return
 	}
+	committed = true
 	ok(c, gin.H{"path": rel, "size": written, "mime": mime})
 }
 

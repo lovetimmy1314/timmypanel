@@ -107,3 +107,44 @@ func TestNormalizeSearchDefaultFallsBack(t *testing.T) {
 		t.Fatalf("仍在清单里的默认引擎被改成了 %q", in.Search.Default)
 	}
 }
+
+// 设置整块存一行 JSON 且每次进首页都全量拉回来，所以引擎清单必须有上限。
+// icon 前端连编辑入口都没有，形状对不上直接清空。
+func TestNormalizeSearchEngineLimits(t *testing.T) {
+	in := model.DefaultSettings()
+	in.Search.Engines = nil
+	for i := 0; i < 100; i++ {
+		in.Search.Engines = append(in.Search.Engines, model.SearchEngine{
+			Name: "引擎", URL: "https://e.example.com/s?q=%s", Icon: "mdi:magnify",
+		})
+	}
+	normalizeSettings(&in)
+	if n := len(in.Search.Engines); n != maxSearchEngines {
+		t.Errorf("引擎数 = %d，期望截到 %d", n, maxSearchEngines)
+	}
+
+	// 名字按字符截，URL 过长整条丢掉，icon 形状不对的清空
+	in = model.DefaultSettings()
+	in.Search.Engines = []model.SearchEngine{
+		{Name: strings.Repeat("名", 80), URL: "https://a.example.com/s?q=%s", Icon: "mdi:google"},
+		{Name: "太长", URL: "https://b.example.com/s?q=%s&pad=" + strings.Repeat("x", maxEngineURLBytes), Icon: ""},
+		{Name: "脏图标", URL: "https://c.example.com/s?q=%s", Icon: "url(https://evil/x)"},
+		{Name: "别的图标集", URL: "https://d.example.com/s?q=%s", Icon: "fa:github"},
+	}
+	normalizeSettings(&in)
+	if len(in.Search.Engines) != 3 {
+		t.Fatalf("过长 URL 那条应被丢掉，剩下 %d 条: %+v", len(in.Search.Engines), in.Search.Engines)
+	}
+	first := in.Search.Engines[0]
+	if !utf8.ValidString(first.Name) || utf8.RuneCountInString(first.Name) != maxEngineNameRunes {
+		t.Errorf("引擎名截断不对: %q", first.Name)
+	}
+	if first.Icon != "mdi:google" {
+		t.Errorf("合法的 mdi 图标名被改动了: %q", first.Icon)
+	}
+	for _, e := range in.Search.Engines[1:] {
+		if e.Icon != "" {
+			t.Errorf("%q 的图标 %q 形状不对，应被清空", e.Name, e.Icon)
+		}
+	}
+}

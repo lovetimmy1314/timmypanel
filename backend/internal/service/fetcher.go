@@ -415,11 +415,6 @@ var mimeByExt = map[string]string{
 	".gif": "image/gif", ".ico": "image/x-icon", ".svg": "image/svg+xml",
 }
 
-// sniffIconExt 按下载到的**内容**判定图标类型，返回落盘扩展名。
-// 不信任响应头，两个方向都错得起：有站点给 favicon 发 application/octet-stream
-// （本该收却被拒），也有站点给 404 页面发 image/png（本该拒却被当图片存下来）。
-// 这和 api/upload.go 对用户上传的处理是同一个思路：按文件实际内容判类型。
-// headerCT 只用于拼错误信息。
 // SniffStoredImage 按内容判定图片类型，给备份还原这类「用户给的文件」用。
 // 和 SaveIcon 同一套规则：不信任文件名和声明的类型。
 func SniffStoredImage(data []byte) (ext, mime string, err error) {
@@ -430,6 +425,11 @@ func SniffStoredImage(data []byte) (ext, mime string, err error) {
 	return ext, mimeByExt[ext], nil
 }
 
+// sniffIconExt 按下载到的**内容**判定图标类型，返回落盘扩展名。
+// 不信任响应头，两个方向都错得起：有站点给 favicon 发 application/octet-stream
+// （本该收却被拒），也有站点给 404 页面发 image/png（本该拒却被当图片存下来）。
+// 这和 api/upload.go 对用户上传的处理是同一个思路：按文件实际内容判类型。
+// headerCT 只用于拼错误信息。
 func sniffIconExt(data []byte, headerCT string) (string, error) {
 	if len(data) == 0 {
 		return "", errors.New("图标内容为空")

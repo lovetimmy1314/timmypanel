@@ -4,6 +4,7 @@
 package api
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -48,6 +49,21 @@ func (s *Server) handlePutSettings(c *gin.Context) {
 	}
 	ok(c, in)
 }
+
+// 搜索引擎清单的上限。设置整块以 JSON 存一行，前端每次进首页都全量拉回来，
+// 所以这些数字是防「一次 PUT 把这一行撑到兆级」的，不是功能约束——
+// 真有人要配 32 个搜索引擎，那是另一个产品了。
+const (
+	maxSearchEngines   = 32
+	maxEngineNameRunes = 32
+	maxEngineURLBytes  = 512
+)
+
+// engineIconPattern 收紧引擎图标名。前端只会把它当 iconify 图标名用，而图标集
+// 只打包了 mdi（决策 019），别的前缀画不出来。形状对不上就清空——这个字段
+// 目前前端连编辑入口都没有（SearchPanel 建引擎时写死 icon: ”），
+// 非空值只可能来自内置默认引擎，收紧不会误伤用户数据。
+var engineIconPattern = regexp.MustCompile(`^mdi:[a-z0-9]+(-[a-z0-9]+)*$`)
 
 // safeCSSColor 判断一个值能否安全地当作 CSS 颜色/渐变直接写进 style。
 // 只放行颜色和渐变函数真正需要的字符集：字母数字、# % . , ( ) 空格和连字符。
@@ -156,16 +172,31 @@ func normalizeSettings(in *model.Settings) {
 		in.Network = "wan"
 	}
 
+	// 就地过滤：engines 和 in.Search.Engines 共用底层数组，写下标永远不超过读下标。
 	engines := in.Search.Engines[:0]
 	for _, e := range in.Search.Engines {
+		if len(engines) >= maxSearchEngines {
+			break
+		}
 		e.Name = strings.TrimSpace(e.Name)
 		e.URL = strings.TrimSpace(e.URL)
+		e.Icon = strings.TrimSpace(e.Icon)
 		lower := strings.ToLower(e.URL)
 		if e.Name == "" || !strings.Contains(e.URL, "%s") {
 			continue
 		}
 		if !strings.HasPrefix(lower, "http://") && !strings.HasPrefix(lower, "https://") {
 			continue
+		}
+		if len(e.URL) > maxEngineURLBytes {
+			continue
+		}
+		// 引擎名按字符截（「磁力搜索」这种中文名是常态），不按字节。
+		if r := []rune(e.Name); len(r) > maxEngineNameRunes {
+			e.Name = string(r[:maxEngineNameRunes])
+		}
+		if !engineIconPattern.MatchString(e.Icon) {
+			e.Icon = ""
 		}
 		engines = append(engines, e)
 	}

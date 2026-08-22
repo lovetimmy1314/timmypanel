@@ -18,21 +18,46 @@ import (
 	"timmypanel/internal/model"
 )
 
+// countByUser 一次取回每个用户的记录数。给用户列表用：原来是在循环里逐个
+// Count，用户一多就是 2N+1 条查询，而这两个数字一条 GROUP BY 就够了。
+func (s *Server) countByUser(m any) (map[uint]int64, error) {
+	var rows []struct {
+		UserID uint
+		N      int64
+	}
+	if err := s.db.Model(m).Select("user_id, COUNT(*) as n").Group("user_id").Scan(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make(map[uint]int64, len(rows))
+	for _, r := range rows {
+		out[r.UserID] = r.N
+	}
+	return out, nil
+}
+
 func (s *Server) handleAdminListUsers(c *gin.Context) {
 	var users []model.User
 	if err := s.db.Order("id asc").Find(&users).Error; err != nil {
 		serverError(c, err)
 		return
 	}
+	siteCounts, err := s.countByUser(&model.Site{})
+	if err != nil {
+		serverError(c, err)
+		return
+	}
+	groupCounts, err := s.countByUser(&model.Group{})
+	if err != nil {
+		serverError(c, err)
+		return
+	}
 	out := make([]gin.H, 0, len(users))
 	for i := range users {
-		var sites, groups int64
-		s.db.Model(&model.Site{}).Where("user_id = ?", users[i].ID).Count(&sites)
-		s.db.Model(&model.Group{}).Where("user_id = ?", users[i].ID).Count(&groups)
+		// 一条记录都没有的用户不会出现在 GROUP BY 结果里，取零值正好。
 		out = append(out, gin.H{
 			"id": users[i].ID, "username": users[i].Username, "nickname": users[i].Nickname,
 			"role": users[i].Role, "disabled": users[i].Disabled, "createdAt": users[i].CreatedAt,
-			"siteCount": sites, "groupCount": groups,
+			"siteCount": siteCounts[users[i].ID], "groupCount": groupCounts[users[i].ID],
 		})
 	}
 	ok(c, gin.H{"items": out})

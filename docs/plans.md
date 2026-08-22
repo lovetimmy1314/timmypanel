@@ -7,63 +7,7 @@
 
 ## 进行中
 
-### 2026-08-22 全量代码审查的修复
-
-一轮通读后攒下的问题，按「安全 → 正确性 → 健壮性 → 优化」四批做，每批一个提交。
-带「实测」的三条是起了实例复现过的，改完按同样的方式回验。
-
-**第一批 · 安全**
-
-- [ ] **登录耗时泄露账号是否存在**（`api/auth.go`）。`err != nil || bcrypt.Compare(...)`
-      短路，用户不存在时 bcrypt 根本不跑。**实测**：`admin` + 错密码 0.20s，
-      `nosuchuser` + 错密码 0.0007s，差 200 倍。文案统一了但时间没有。
-      改：查不到用户时也对一个固定假哈希跑一次 bcrypt。
-- [ ] **`/api/v1/ingest` 在鉴权前解析整个 multipart**（`api/ingest.go`）。
-      `c.PostForm("token")` 触发 `ParseMultipartForm(16MB)`，而这是全站唯一
-      不需要会话的写端点，body 没有任何上限。改：这条路由套 `http.MaxBytesReader`。
-- [ ] **备份 zip 最坏 4GB 常驻内存**（`api/backup.go`）。`maxBackupAssets`(500) ×
-      `maxBackupAssetBytes`(8MB) 全攒在内存里。改：加**累计**字节预算。
-
-**第二批 · 正确性**
-
-- [ ] **`/assets/` 吐出构建产物清单**（`web/embed.go`）。`sub.Open("assets")` 对目录
-      也成功，于是落进 `http.FileServer` 生成目录列表。**实测**：`/assets/` 返回
-      404 状态 + 完整 `<a href=...>` 列表（状态码是 gin NoRoute 盖的）。
-      改：`Stat()` 出来是目录就按 404 走，和「assets 下找不到就是真 404」对齐。
-- [ ] **按字节截断把中文切碎**（`api/site.go` 的 `sanitizeIconValue`、
-      `service/bookmark.go` 的 `sanitizeFolder`）。**实测**：30 个「文」截到 64 字节，
-      末尾 `e6 96 87 e6`，`utf8.ValidString` = false，序列化后是 `�`。
-      同一个坑 `sanitizeFooterHTML` 和 `normalizeSiteConfig` 都躲过了，这两处漏了。
-      改：按 rune 截，各补一条单测。
-- [ ] **`before-import` 快照永不清理**（`api/backup.go` 的 `pruneBackups`）。
-      只认文件名里的 `-auto-`。导入是普通用户能触发的，磁盘会无限涨。
-
-**第三批 · 健壮性**
-
-- [ ] **后台 goroutine 里 panic 整个进程挂掉**（`service/fetcher.go` 的
-      `ForEachLimited`、`api/site.go` 的 `go s.backfillIcons`）。`gin.Recovery()`
-      覆盖不到请求 goroutine 之外。改：worker 自己 recover 并记日志。
-- [ ] **`TP_SECURE` 写错值静默关掉 Secure Cookie**（`config/config.go`）。
-      `strconv.ParseBool` 的 error 被丢掉，`TP_SECURE=yes` → `false`。
-      这是公网部署明确要求打开的一项，配错却毫无提示。改：解析失败保留原值 + `slog.Warn`。
-
-**第四批 · 优化**
-
-- [ ] **管理员用户列表是 N+1**（`api/admin.go`）。每个用户两次 `Count`，
-      改成两条 `GROUP BY user_id`。
-- [ ] **`sniffIconExt` 的文档注释错位到了 `SniffStoredImage` 头上**（`service/fetcher.go`）。
-      中间少一个空行，godoc 里显示的是错的。
-- [ ] **`normalizeSettings` 不限制搜索引擎条数和字段长度**（`api/setting.go`）。
-      还有 `SearchEngine.Icon` 从头到尾没消毒也没被前端用到（`SearchBar` 只渲染星标）。
-- [ ] **上传失败留孤儿文件**（`api/upload.go`）。`io.Copy` 或 `db.Create` 失败时，
-      `os.Create` 出来的文件不会被删。
-
-**这次不做，及理由**
-
-- `ingestQueues.list` 只有测试在调用。它是 `set`/`popCanonical` 之外唯一的只读入口，
-  删了测试就得去摸 map 内部，那更糟。留着。
-- 登录限流仍是「5 次/15 分钟/IP」。上面第一条只堵住耗时旁路，换 IP 慢速枚举依旧可行；
-  真要堵死得上验证码或全局限流，不值当，见决策 031。
+（空）
 
 ## 待办
 
@@ -132,6 +76,14 @@ cd frontend && npm run typecheck
 | ingest 用错令牌 / 已吊销令牌 | 401，同 IP 连续 10 次后 429 |
 | 同 URL 二次 ingest（协议/www/斜杠不同） | 走更新不新建，只补空标题和图标 |
 | `PUT /ingest/queue` 后逐个 ingest | 响应 `next` 依次给出队列里下一个，`remaining` 递减 |
+| 登录时给存在和不存在的用户名各发几次错密码，掐 `%{time_total}` | 两者耗时同一量级（都是一次 bcrypt，约 0.2s）。差两个数量级说明短路又回来了，决策 031 |
+| 给 `/api/v1/ingest` 发 5MB body | 413，且**不**消耗令牌限流次数；正常的 urlencoded 和 multipart 两种发法仍 200 |
+| `curl /assets/`、`/assets`、`/icons/` | 全 404，body 只有 gin 默认那句。出现 `<a href=...>` 列表就是目录又被当资源供货了 |
+| 同上之后再访问 `/admin`、`/`、带哈希的真实资源 | 依次 200 / 200 / 200，深链接和长缓存没被误伤 |
+| 文字图标填 30 个中文、书签目录名填超长中文 | 存回来是合法 UTF-8，没有 `U+FFFD` |
+| 连着覆盖导入 N 次（N > `backup.keep`） | `data/backups` 里 `-before-import-` 只剩 keep 份，且 `-auto-` 那批一份没少 |
+| `TP_SECURE=yes` 启动 | 日志有一条 WARN，配置文件里的值原样保留（**不是**静默变 false） |
+| 管理页用户列表 | 卡片/分组数正确，且一个记录都没有的新账号显示 0 而不是漏行 |
 
 提交前额外确认一条（不限于上面那几类改动）：
 
