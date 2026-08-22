@@ -3,6 +3,7 @@ package service
 import (
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // 一份精简过的 Chrome 导出书签，含多级目录、根级书签和 javascript 书签。
@@ -54,6 +55,22 @@ func TestParseBookmarks(t *testing.T) {
 	}
 	if byURL["https://github.com"].Icon == "" {
 		t.Error("应保留书签里内嵌的图标")
+	}
+}
+
+// 书签目录名常是中文。长度上限按字节算的话，48 字节切在第 17 个字中间，
+// 存进库就是坏 UTF-8——和 sanitizeIconValue 是同一个坑。
+func TestSanitizeFolderTruncatesByRune(t *testing.T) {
+	got := sanitizeFolder(strings.Repeat("目", 100))
+	if !utf8.ValidString(got) {
+		t.Errorf("截断后不是合法 UTF-8: % x", got)
+	}
+	if n := utf8.RuneCountInString(got); n != 48 {
+		t.Errorf("截断后 %d 个字符，期望 48", n)
+	}
+	// 分隔符替换和两端去空白仍然照旧
+	if got := sanitizeFolder("  开发/工具  "); got != "开发-工具" {
+		t.Errorf("sanitizeFolder 基本行为变了: %q", got)
 	}
 }
 

@@ -147,8 +147,11 @@ func sanitizeIconValue(iconType, v string) string {
 		return ""
 	}
 	if iconType == model.IconTypeIconify || iconType == model.IconTypeText {
-		if len(v) > 64 {
-			return v[:64]
+		// 按字符截，不按字节：文字图标可以是中文，一个字 3 字节，切在序列中间
+		// 存进去就是坏 UTF-8，序列化时被换成 U+FFFD，卡片上显示一个替换字符。
+		// normalizeSettings 的 logoText 和 normalizeSiteConfig 的 siteTitle 早就这么做了。
+		if r := []rune(v); len(r) > 64 {
+			return string(r[:64])
 		}
 		return v
 	}

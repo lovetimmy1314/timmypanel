@@ -1,6 +1,10 @@
 package api
 
-import "testing"
+import (
+	"strings"
+	"testing"
+	"unicode/utf8"
+)
 
 func TestNormalizeURL(t *testing.T) {
 	cases := []struct {
@@ -73,6 +77,25 @@ func TestSanitizeIconValue(t *testing.T) {
 		if got := sanitizeIconValue(c.iconType, c.in); got != c.want {
 			t.Errorf("sanitizeIconValue(%q, %q) = %q，期望 %q", c.iconType, c.in, got, c.want)
 		}
+	}
+}
+
+// 文字图标可以是中文。长度上限按字节算的话，一个 3 字节的字会被切成半截，
+// 存进库就是坏 UTF-8，序列化时换成 U+FFFD，卡片上显示一个替换字符。
+func TestSanitizeIconValueTruncatesByRune(t *testing.T) {
+	for _, iconType := range []string{"text", "iconify"} {
+		in := strings.Repeat("文", 100)
+		got := sanitizeIconValue(iconType, in)
+		if !utf8.ValidString(got) {
+			t.Errorf("%s: 截断后不是合法 UTF-8: % x", iconType, got)
+		}
+		if n := utf8.RuneCountInString(got); n != 64 {
+			t.Errorf("%s: 截断后 %d 个字符，期望 64", iconType, n)
+		}
+	}
+	// 没超上限的原样放行，别顺手改了短值
+	if got := sanitizeIconValue("text", "文"); got != "文" {
+		t.Errorf("短值被改动了: %q", got)
 	}
 }
 

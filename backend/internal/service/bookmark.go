@@ -108,10 +108,12 @@ func isImportableLink(href string) bool {
 }
 
 // sanitizeFolder 清掉目录名里的路径分隔符，避免破坏多级拼接。
+// 长度按**字符**截：书签目录名常是中文，按字节切会把最后一个字切成半截，
+// 存进库就是坏 UTF-8（序列化后显示成替换字符）。
 func sanitizeFolder(s string) string {
 	s = strings.ReplaceAll(s, "/", "-")
-	if len(s) > 48 {
-		s = s[:48]
+	if r := []rune(s); len(r) > 48 {
+		s = string(r[:48])
 	}
 	return strings.TrimSpace(s)
 }

@@ -133,3 +133,22 @@ func TestReadBackupZip(t *testing.T) {
 		t.Fatalf("asset data = %q", assets[0].Data)
 	}
 }
+
+// pruneBackups 按「账号 + 标记」分桶。两点要守住：每日备份和导入前快照各留各的
+// （连着导入几次不能把自动备份挤掉），以及账号名里带 "-auto-" 的不能被截错。
+func TestBackupBucket(t *testing.T) {
+	cases := map[string]string{
+		"admin-auto-20260822-101500.json":             "admin-auto-",
+		"admin-before-import-20260822-101500.json":    "admin-before-import-",
+		"a-auto-b-auto-20260822-101500.json":          "a-auto-b-auto-",
+		"a-auto-b-before-import-20260822-101500.json": "a-auto-b-before-import-",
+		"a-before-import-b-auto-20260822-101500.json": "a-before-import-b-auto-",
+		"手工放进来的.json":                                 "",
+		"timmypanel-20260822-101500.json":             "",
+	}
+	for name, want := range cases {
+		if got := backupBucket(name); got != want {
+			t.Errorf("backupBucket(%q) = %q，期望 %q", name, got, want)
+		}
+	}
+}

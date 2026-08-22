@@ -204,6 +204,9 @@ func (s *Server) handleImportBackup(c *gin.Context) {
 		return
 	}
 	slog.Info("导入前已自动快照", "path", snap)
+	// 导入是普通用户能反复触发的，快照得在这里就回收 —— 只靠 StartAutoBackup
+	// 那个循环不够：auto_daily 关掉时它压根不跑。
+	s.pruneBackups()
 
 	if n, err := s.restoreBackupAssets(uid, assets); err != nil {
 		serverError(c, err)
@@ -590,29 +593,50 @@ func (s *Server) StartAutoBackup() {
 	}()
 }
 
-// pruneBackups 按文件名时间倒序保留最近 N 份自动备份，手动快照不动。
+// prunedTags 是会被 pruneBackups 回收的快照标记。两种都要收：
+// before-import 是普通用户每导入一次就产一份的，原来一份都不删，磁盘只涨不落。
+var prunedTags = []string{"-auto-", "-before-import-"}
+
+// backupBucket 从备份文件名里切出「账号 + 标记」，切不出来返回空串。
+// 分桶要带上标记：每日自动备份和导入前快照各留各的 Keep 份，否则连着导入几次
+// 就把自动备份全挤掉了 —— 而那正是出事时最想要的那一份。
+//
+// 用 LastIndex 而不是 Index：时间戳里不含这两个标记，但**账号名里可以有**
+// （safeFileSegment 放行连字符和字母），Index 会把 "a-auto-b" 这种账号截断，
+// 和账号 "a" 的备份混进同一个桶。两个标记都找一遍取更靠后的那个，
+// 这样 "a-auto-b-before-import-时间戳" 也能落到正确的桶里。
+func backupBucket(name string) string {
+	best := -1
+	bucket := ""
+	for _, tag := range prunedTags {
+		if idx := strings.LastIndex(name, tag); idx > best {
+			best = idx
+			bucket = name[:idx] + tag
+		}
+	}
+	return bucket
+}
+
+// pruneBackups 按文件名时间倒序，给每个「账号 + 标记」各留最近 N 份。
+// 认不出标记的（手工放进来的文件）一概不动。
 func (s *Server) pruneBackups() {
 	entries, err := os.ReadDir(s.cfg.BackupDir())
 	if err != nil {
 		return
 	}
-	// 按账号分别保留，否则用户多的时候会互相挤掉对方的备份。
-	byUser := map[string][]string{}
+	byBucket := map[string][]string{}
 	for _, e := range entries {
 		name := e.Name()
 		if e.IsDir() || !strings.HasSuffix(name, ".json") {
 			continue
 		}
-		// 时间戳里不含 "-auto-"，所以最后一个才是用户名和 tag 的真正分界；
-		// 用 Index 的话，名字里带 "-auto-" 的账号会被截断并和别人的备份混到一组。
-		idx := strings.LastIndex(name, "-auto-")
-		if idx < 0 {
+		bucket := backupBucket(name)
+		if bucket == "" {
 			continue
 		}
-		user := name[:idx]
-		byUser[user] = append(byUser[user], name)
+		byBucket[bucket] = append(byBucket[bucket], name)
 	}
-	for _, names := range byUser {
+	for _, names := range byBucket {
 		sort.Sort(sort.Reverse(sort.StringSlice(names)))
 		for i := s.cfg.Backup.Keep; i < len(names); i++ {
 			_ = os.Remove(filepath.Join(s.cfg.BackupDir(), names[i]))

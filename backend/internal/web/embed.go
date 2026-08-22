@@ -54,7 +54,16 @@ func Register(r *gin.Engine) error {
 			return
 		}
 		if f, err := sub.Open(clean); err == nil {
+			st, statErr := f.Stat()
 			f.Close()
+			// 目录也能 Open 成功。把它丢给 http.FileServer 会生成一份目录列表——
+			// /assets/ 就是这么把全部构建产物的文件名列出来的（状态码还是 gin
+			// NoRoute 盖的 404，body 却是列表，两边都不对）。dist 下的目录从来
+			// 不是前端路由，直接 404，也别回落 index.html。
+			if statErr != nil || st.IsDir() {
+				c.Status(http.StatusNotFound)
+				return
+			}
 			// 带内容哈希的资源可以长缓存，index.html 必须每次校验。
 			if strings.HasPrefix(clean, "assets/") {
 				c.Header("Cache-Control", "public, max-age=31536000, immutable")
