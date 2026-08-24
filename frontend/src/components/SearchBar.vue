@@ -167,7 +167,6 @@ function renderEngineOption({ node, option }: { node: VNode; option: SelectOptio
         v-model:value="engine"
         :options="engineOptions"
         :render-option="renderEngineOption"
-        size="small"
         class="w-28 shrink-0"
         :consistent-menu-width="false"
         :placeholder="t('search.engine')"
@@ -227,5 +226,13 @@ function renderEngineOption({ node, option }: { node: VNode; option: SelectOptio
 .tp-search-tinted :deep(.n-input__placeholder) {
   color: var(--tp-search-color);
   opacity: 0.55;
+}
+
+/* 左边引擎下拉是唯一带边框的内部元素（右边 input 是 :bordered="false"），
+   所以它的盒子只要和 input 不同高就一眼看出来没对齐——naive 的 select 尺寸
+   必须和 input 一样是 medium（34px），别再给它 size="small"（28px）。
+   边框圆角也跟着外层药丸走，否则是个方角矩形嵌在圆壳里。 */
+.tp-searchbar :deep(.n-base-selection) {
+  border-radius: 9999px;
 }
 </style>
