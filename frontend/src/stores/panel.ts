@@ -23,6 +23,7 @@ const DEFAULT_SETTINGS: Settings = {
   },
   search: { enabled: true, default: 'local', engines: [], bars: [], style: { bg: '', color: '', border: '' } },
   weather: { enabled: true, locationMode: 'manual', city: '', lat: 0, lon: 0, unit: 'c' },
+  calendar: { enabled: true, weekStart: 'mon' },
   theme: 'auto',
   language: 'zh',
   network: 'wan',
@@ -77,6 +78,7 @@ export const usePanelStore = defineStore('panel', () => {
           style: { ...DEFAULT_SETTINGS.search.style, ...st.search?.style },
         },
         weather: { ...DEFAULT_SETTINGS.weather, ...st.weather },
+        calendar: { ...DEFAULT_SETTINGS.calendar, ...st.calendar },
       }
       // 服务端的语言是权威值，盖掉 localStorage 里那份起手值（见 src/i18n/index.ts）。
       setLocale(settings.value.language)

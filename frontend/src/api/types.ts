@@ -79,6 +79,10 @@ export interface Settings {
     lon: number
     unit: 'c' | 'f'
   }
+  calendar: {
+    enabled: boolean
+    weekStart: 'mon' | 'sun'
+  }
   theme: 'auto' | 'light' | 'dark'
   language: 'zh' | 'en'
   network: 'wan' | 'lan'
@@ -95,6 +99,30 @@ export interface Weather {
   maxC: number | null // 上游偶尔不给当日区间，这时是 null，不是 0
   minC: number | null
   updatedAt: number // unix 秒
+}
+
+// GET /calendar/month 的一天。农历、节气、节日名都是后端拼好的中文，
+// 前端只管显示——这些是中文历法专名，没有通行英译，不进 i18n（决策 034）。
+export interface CalendarDay {
+  date: string // 2026-08-24
+  day: number
+  weekday: number // 0=周日 … 6=周六
+  lunarMonth: string
+  lunarDay: string
+  ganZhi: string
+  zodiac: string
+  festival: string
+  solarTerm: string
+  dayType: '' | 'off' | 'work'
+}
+
+// GET /calendar/month 的整月返回。
+export interface CalendarMonth {
+  y: number
+  m: number
+  // 这一年有没有法定调休数据。没有时不画班/休角标，只显示节日名。
+  hasHolidayData: boolean
+  items: CalendarDay[]
 }
 
 // GET /weather/geocode 的一条结果。

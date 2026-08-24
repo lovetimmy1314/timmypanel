@@ -202,6 +202,8 @@ export const en: Record<MessageKey, string> = {
   'settings.nav.appearanceDesc': 'Logo, clock, search bar, wallpaper and footer',
   'settings.nav.weather': 'Weather',
   'settings.nav.weatherDesc': 'Top-left weather float, location and unit',
+  'settings.nav.calendar': 'Calendar',
+  'settings.nav.calendarDesc': 'Top-right calendar float with lunar dates and holidays',
   'settings.nav.search': 'Search',
   'settings.nav.searchDesc': 'Search bars, engines and default sources',
   'settings.nav.groups': 'Groups',
@@ -443,4 +445,26 @@ export const en: Record<MessageKey, string> = {
   'weather.cond.rain': 'Rain',
   'weather.cond.snow': 'Snow',
   'weather.cond.thunder': 'Thunderstorm',
+
+  // Calendar. Lunar dates, solar terms and festival names stay in Chinese —
+  // they are Chinese calendar proper nouns with no usable English equivalent
+  // (decision 034). Only the surrounding UI copy is translated.
+  'calendar.prevMonth': 'Previous month',
+  'calendar.nextMonth': 'Next month',
+  'calendar.backToToday': 'Back to today',
+  'calendar.settings': 'Settings',
+  'calendar.off': 'Off',
+  'calendar.work': 'Work',
+  'calendar.weekStart': 'Week starts on',
+  'calendar.weekStartMon': 'Monday',
+  'calendar.weekStartSun': 'Sunday',
+  'calendar.pcOnlyHint': 'Desktop only, never shown on phones',
+  'calendar.holidayHint': 'Off/work badges only appear for years covered by the published Chinese public-holiday schedule; other years show festival names only.',
+  'calendar.w0': 'Su',
+  'calendar.w1': 'Mo',
+  'calendar.w2': 'Tu',
+  'calendar.w3': 'We',
+  'calendar.w4': 'Th',
+  'calendar.w5': 'Fr',
+  'calendar.w6': 'Sa',
 }

@@ -14,6 +14,7 @@ import GalleryPanel from './GalleryPanel.vue'
 import SiteConfigPanel from './SiteConfigPanel.vue'
 import SearchPanel from './SearchPanel.vue'
 import WeatherPanel from './WeatherPanel.vue'
+import CalendarPanel from './CalendarPanel.vue'
 import AboutPanel from './AboutPanel.vue'
 
 const props = defineProps<{ show: boolean; initial?: PanelKey }>()
@@ -23,6 +24,7 @@ type PanelKey =
   | 'appearance'
   | 'search'
   | 'weather'
+  | 'calendar'
   | 'groups'
   | 'backfill'
   | 'bookmarklet'
@@ -51,6 +53,7 @@ const entries = computed(() =>
       { key: 'appearance' as const, title: t('settings.nav.appearance'), desc: t('settings.nav.appearanceDesc'), icon: 'mdi:palette-outline' },
       { key: 'search' as const, title: t('settings.nav.search'), desc: t('settings.nav.searchDesc'), icon: 'mdi:magnify' },
       { key: 'weather' as const, title: t('settings.nav.weather'), desc: t('settings.nav.weatherDesc'), icon: 'mdi:weather-partly-cloudy' },
+      { key: 'calendar' as const, title: t('settings.nav.calendar'), desc: t('settings.nav.calendarDesc'), icon: 'mdi:calendar-month-outline' },
       { key: 'groups' as const, title: t('settings.nav.groups'), desc: t('settings.nav.groupsDesc'), icon: 'mdi:folder-cog-outline' },
       { key: 'backfill' as const, title: t('settings.nav.backfill'), desc: t('settings.nav.backfillDesc'), icon: 'mdi:auto-fix' },
       { key: 'bookmarklet' as const, title: t('settings.nav.bookmarklet'), desc: t('settings.nav.bookmarkletDesc'), icon: 'mdi:bookmark-plus-outline' },
@@ -107,6 +110,7 @@ const current = computed(() => entries.value.find((e) => e.key === active.value)
         <AppearancePanel v-if="active === 'appearance'" @changed="emit('changed')" />
         <SearchPanel v-else-if="active === 'search'" @changed="emit('changed')" />
         <WeatherPanel v-else-if="active === 'weather'" @changed="emit('changed')" />
+        <CalendarPanel v-else-if="active === 'calendar'" @changed="emit('changed')" />
         <GroupManager v-else-if="active === 'groups'" @changed="emit('changed')" />
         <BackfillPanel v-else-if="active === 'backfill'" @changed="emit('changed')" />
         <BookmarkletPanel v-else-if="active === 'bookmarklet'" />

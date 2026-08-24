@@ -211,7 +211,7 @@ color/gradient 走 `safeCSSColor`（只允许颜色和渐变函数用得到的�
 `@iconify/vue` 默认是运行时去 `api.iconify.design` 取图形数据的，这条路现在**被关掉了**
 （`src/icons/index.ts` 里 `addAPIProvider('', { resources: [] })`）。图标改成本地两层：
 
-- **界面自己用的**（源码里写死的 `mdi:xxx`，当前 45 个）→ `src/icons/ui-icons.ts`，
+- **界面自己用的**（源码里写死的 `mdi:xxx`，当前 52 个）→ `src/icons/ui-icons.ts`，
   由 `scripts/gen-icons.mjs` 扫源码生成，**是生成物但进版本库**，`main.ts` 一进来就注册。
   加了新图标名之后跑 `npm run icons`（`npm run dev` / `npm run build` 会自动跑）。
   脚本对拼错的图标名直接抛异常，别把它绕过去。

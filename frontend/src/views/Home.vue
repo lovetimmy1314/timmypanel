@@ -14,6 +14,7 @@ import AccountDialog from '@/components/AccountDialog.vue'
 import BackTop from '@/components/BackTop.vue'
 import GroupJump from '@/components/GroupJump.vue'
 import WeatherFloat from '@/components/WeatherFloat.vue'
+import CalendarFloat from '@/components/CalendarFloat.vue'
 import BrandMark from '@/components/BrandMark.vue'
 import { usePanelStore } from '@/stores/panel'
 import { useUserStore } from '@/stores/user'
@@ -42,9 +43,9 @@ const showEditor = ref(false)
 const showImport = ref(false)
 const showSettings = ref(false)
 // 设置弹窗打开时落在哪一栏。顶栏那个齿轮不指定，走默认的「个性化」。
-const settingsPanel = ref<'appearance' | 'weather'>('appearance')
+const settingsPanel = ref<'appearance' | 'weather' | 'calendar'>('appearance')
 
-function openSettings(panelKey: 'appearance' | 'weather' = 'appearance') {
+function openSettings(panelKey: 'appearance' | 'weather' | 'calendar' = 'appearance') {
   settingsPanel.value = panelKey
   showSettings.value = true
 }
@@ -60,6 +61,8 @@ const editorLockGroup = ref(false)
 // 手机上是**不挂载**，不是用 CSS 藏起来——藏起来的话它的轮询和请求照跑。
 const isDesktop = useIsDesktop()
 const showWeather = computed(() => isDesktop.value && panel.settings.weather.enabled)
+// 万年历同理，占右上角（决策 034）。
+const showCalendar = computed(() => isDesktop.value && panel.settings.calendar.enabled)
 
 const isBoardEditing = (groupId: number) => editing.value || groupEditing.value === groupId
 
@@ -373,7 +376,7 @@ onMounted(async () => {
            允许换行，时钟另起一行（见 header 下方） -->
       <header
         class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3 sm:mb-6 tp-surface-glass rounded-2xl px-3 py-2.5"
-        :class="showWeather ? 'tp-header-gap-l' : ''"
+        :class="[showWeather ? 'tp-header-gap-l' : '', showCalendar ? 'tp-header-gap-r' : '']"
       >
         <template v-if="panel.settings.layout.showLogo">
           <img
@@ -693,6 +696,9 @@ onMounted(async () => {
 
     <!-- 左上角悬浮天气。只在桌面端挂载：手机上不该有这个组件，也不该有它的请求 -->
     <WeatherFloat v-if="showWeather" @configure="openSettings('weather')" />
+
+    <!-- 右上角悬浮万年历。同样只在桌面端挂载 -->
+    <CalendarFloat v-if="showCalendar" @configure="openSettings('calendar')" />
 
     <BackTop />
     <GroupJump :boards="visibleBoards" @jump="jumpToGroup" />

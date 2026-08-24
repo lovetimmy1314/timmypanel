@@ -199,6 +199,8 @@ export const zh = {
   'settings.nav.appearanceDesc': 'Logo、时钟、搜索栏、壁纸和页脚',
   'settings.nav.weather': '天气组件',
   'settings.nav.weatherDesc': '左上角悬浮天气，含定位和单位',
+  'settings.nav.calendar': '万年历',
+  'settings.nav.calendarDesc': '右上角悬浮万年历，含农历和节假日',
   'settings.nav.search': '搜索设置',
   'settings.nav.searchDesc': '搜索框、搜索引擎和默认搜索源',
   'settings.nav.groups': '分组管理',
@@ -432,6 +434,27 @@ export const zh = {
   'weather.cond.rain': '雨',
   'weather.cond.snow': '雪',
   'weather.cond.thunder': '雷阵雨',
+
+  // 万年历。农历、节气、节日名不在这儿——它们是中文历法专名，由后端直接给出
+  // 中文，英文界面下也保持中文（决策 034）。这里只有界面框架文案。
+  'calendar.prevMonth': '上个月',
+  'calendar.nextMonth': '下个月',
+  'calendar.backToToday': '回到今天',
+  'calendar.settings': '设置',
+  'calendar.off': '休',
+  'calendar.work': '班',
+  'calendar.weekStart': '每周起始',
+  'calendar.weekStartMon': '周一',
+  'calendar.weekStartSun': '周日',
+  'calendar.pcOnlyHint': '只在桌面端显示，手机上不占地方',
+  'calendar.holidayHint': '班/休角标只在有当年国务院放假通知数据时显示，没有就只显示节日名。',
+  'calendar.w0': '日',
+  'calendar.w1': '一',
+  'calendar.w2': '二',
+  'calendar.w3': '三',
+  'calendar.w4': '四',
+  'calendar.w5': '五',
+  'calendar.w6': '六',
 } as const
 
 export type MessageKey = keyof typeof zh

@@ -1,5 +1,5 @@
 // 由 scripts/gen-icons.mjs 生成，**别手改**。改了图标名之后跑 npm run icons。
-// 这里只有界面自己用到的 50 个图标；
+// 这里只有界面自己用到的 52 个图标；
 // 用户给卡片挑的图标名走 src/icons/index.ts 的按需加载。
 import type { IconifyJSON } from '@iconify/vue'
 
@@ -36,11 +36,17 @@ export const uiIcons: IconifyJSON = {
     "bookmark-plus-outline": {
       "body": "<path fill=\"currentColor\" d=\"M17 18V5H7v13l5-2.18zm0-15a2 2 0 0 1 2 2v16l-7-3l-7 3V5a2 2 0 0 1 2-2zm-6 4h2v2h2v2h-2v2h-2v-2H9V9h2z\"/>"
     },
+    "calendar-month-outline": {
+      "body": "<path fill=\"currentColor\" d=\"M7 11h2v2H7zm14-6v14c0 1.11-.89 2-2 2H5a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h1V1h2v2h8V1h2v2h1a2 2 0 0 1 2 2M5 7h14V5H5zm14 12V9H5v10zm-4-6v-2h2v2zm-4 0v-2h2v2zm-4 2h2v2H7zm8 2v-2h2v2zm-4 0v-2h2v2z\"/>"
+    },
     "check": {
       "body": "<path fill=\"currentColor\" d=\"M21 7L9 19l-5.5-5.5l1.41-1.41L9 16.17L19.59 5.59z\"/>"
     },
     "chevron-down": {
       "body": "<path fill=\"currentColor\" d=\"M7.41 8.58L12 13.17l4.59-4.59L18 10l-6 6l-6-6z\"/>"
+    },
+    "chevron-left": {
+      "body": "<path fill=\"currentColor\" d=\"M15.41 16.58L10.83 12l4.58-4.59L14 6l-6 6l6 6z\"/>"
     },
     "chevron-right": {
       "body": "<path fill=\"currentColor\" d=\"M8.59 16.58L13.17 12L8.59 7.41L10 6l6 6l-6 6z\"/>"
