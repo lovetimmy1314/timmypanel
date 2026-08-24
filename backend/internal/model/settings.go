@@ -43,11 +43,19 @@ type SearchStyle struct {
 	Border string `json:"border"`
 }
 
+// SearchBar 是一个附加搜索框。主搜索框由 SearchConf 的 Enabled/Default 描述，
+// Bars 里的每一项都会在首页主搜索框下面纵向多排一行，共用同一份引擎清单和配色。
+type SearchBar struct {
+	Enabled bool   `json:"enabled"`
+	Default string `json:"default"` // local 或某个引擎名
+}
+
 // SearchConf 是搜索框配置。
 type SearchConf struct {
 	Enabled bool           `json:"enabled"`
 	Default string         `json:"default"` // local 或某个引擎名
 	Engines []SearchEngine `json:"engines"`
+	Bars    []SearchBar    `json:"bars"` // 附加搜索框，排在主搜索框下面
 	Style   SearchStyle    `json:"style"`
 }
 
@@ -93,6 +101,7 @@ func DefaultSettings() Settings {
 				// 关键词在路径里而不是 query 上，%s 的位置随之不同——占位符是纯字符串替换，两种都支持。
 				{Name: "磁力搜索", URL: "https://yhg007.com/search-%s-0-0-1.html", Icon: "mdi:magnet"},
 			},
+			Bars: []SearchBar{},
 		},
 		Theme:      "auto",
 		Language:   "zh",
@@ -150,6 +159,10 @@ func (s *Setting) Decode() Settings {
 	}
 	if len(out.Search.Engines) == 0 {
 		out.Search.Engines = DefaultSettings().Search.Engines
+	}
+	// nil 切片会序列化成 null，前端拿到 null 就得逐处判空。统一给成空数组。
+	if out.Search.Bars == nil {
+		out.Search.Bars = []SearchBar{}
 	}
 	seedBuiltinEngines(&out)
 	// 老数据没有 showLogo / logoText：从旧字段回填。bool 零值无法区分

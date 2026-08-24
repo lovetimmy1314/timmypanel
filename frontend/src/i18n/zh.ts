@@ -85,6 +85,8 @@ export const zh = {
   'search.local': '站内搜索',
   'search.engine': '引擎',
   'search.placeholderLocal': '搜索已收录的网站…（按 / 聚焦）',
+  // 快捷键只归第一个搜索框，别的搜索框不该提示「按 / 聚焦」。
+  'search.placeholderLocalPlain': '搜索已收录的网站…',
   'search.placeholderEngine': '用 {engine} 搜索…',
   'search.setDefault': '设为默认搜索引擎',
 
@@ -195,7 +197,7 @@ export const zh = {
   'settings.nav.appearance': '个性化设置',
   'settings.nav.appearanceDesc': 'Logo、时钟、搜索栏、壁纸和页脚',
   'settings.nav.search': '搜索设置',
-  'settings.nav.searchDesc': '搜索引擎和默认搜索源',
+  'settings.nav.searchDesc': '搜索框、搜索引擎和默认搜索源',
   'settings.nav.groups': '分组管理',
   'settings.nav.groupsDesc': '增减、重命名和排序分组',
   'settings.nav.backfill': '批量补全',
@@ -253,8 +255,12 @@ export const zh = {
   'appearance.pickBgTitle': '从图库选择背景',
 
   // 搜索设置
+  'searchSet.bars': '搜索框',
+  'searchSet.showBar': '显示搜索框',
+  'searchSet.addBar': '＋ 添加搜索框',
+  'searchSet.barsHint': '每个搜索框可以单独选默认搜索源。添加的搜索框在首页排在原搜索框下面，最多 8 个。',
   'searchSet.default': '默认搜索源',
-  'searchSet.defaultHint': '搜索栏是否显示、以及配色在「个性化设置」里改。',
+  'searchSet.defaultHint': '搜索栏配色在「个性化设置」里改。',
   'searchSet.engines': '搜索引擎',
   'searchSet.engineName': '名称',
   'searchSet.addEngine': '＋ 添加搜索引擎',

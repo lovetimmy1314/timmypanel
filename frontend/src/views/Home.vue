@@ -143,11 +143,26 @@ const dateText = computed(() =>
   now.value.toLocaleDateString(dateLocale.value, { month: 'long', day: 'numeric', weekday: 'long' }),
 )
 
+// ---- 搜索框 ----
+// 首页要渲染哪些搜索框：主搜索框在最前，附加搜索框（search.bars）按配置顺序纵向排在下面。
+// barIndex 是它在 search.bars 里的下标，主搜索框记 -1 —— 点星星设默认引擎时要按这个回写。
+const searchBars = computed(() => {
+  const conf = panel.settings.search
+  const out: { barIndex: number; engine: string }[] = []
+  if (conf.enabled) out.push({ barIndex: -1, engine: conf.default })
+  ;(conf.bars ?? []).forEach((b, i) => {
+    if (b.enabled) out.push({ barIndex: i, engine: b.default })
+  })
+  return out
+})
+
 // ---- 搜索栏设默认引擎（点亮下拉里的星星，立即落库）----
-async function setDefaultEngine(name: string) {
+async function setDefaultEngine(name: string, barIndex: number) {
+  const next = deepClone(panel.settings)
+  if (barIndex < 0) next.search.default = name
+  else if (next.search.bars[barIndex]) next.search.bars[barIndex].default = name
+  else return
   try {
-    const next = deepClone(panel.settings)
-    next.search.default = name
     await panel.saveSettings(next)
     message.success(t('common.saved'))
   } catch (e: any) {
@@ -471,16 +486,19 @@ onMounted(async () => {
         {{ clock }} · {{ dateText }}
       </div>
 
-      <!-- 搜索 -->
-      <div v-if="panel.settings.search.enabled" class="mb-6 sm:mb-8">
+      <!-- 搜索：主搜索框 + 附加搜索框，纵向排列。快捷键归第一个（见 SearchBar 的 hotkeys）。 -->
+      <div v-if="searchBars.length" class="mb-6 sm:mb-8 space-y-3">
         <SearchBar
+          v-for="(bar, i) in searchBars"
+          :key="bar.barIndex"
           :sites="panel.sites"
           :engines="panel.settings.search.engines"
-          :default-engine="panel.settings.search.default"
+          :default-engine="bar.engine"
           :network="panel.settings.network"
           :bar-style="panel.settings.search.style"
+          :hotkeys="i === 0"
           @update:query="query = $event"
-          @set-default="setDefaultEngine"
+          @set-default="setDefaultEngine($event, bar.barIndex)"
         />
       </div>
 

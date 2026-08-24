@@ -21,7 +21,7 @@ It ships as **one executable plus one data directory**. The web UI is compiled i
 - Bulk-import browser bookmarks, or add one URL and auto-fetch its title, description and icon
 - A bookmarklet for sites the server cannot reach — your browser uploads the icon and title
 - Card grid grouped by category, with drag-and-drop reorder (including across groups)
-- Search your own cards, plus optional external engines (Google, Bing, Baidu, …)
+- Search your own cards, plus optional external engines (Google, Bing, Baidu, …); stack several search bars, each with its own default source
 - Dual addresses on a card (public + LAN) and one button to flip the whole panel
 - Light / dark theme; image, solid or gradient wallpapers
 - Chinese and English UI; works on phones; can be added to the home screen

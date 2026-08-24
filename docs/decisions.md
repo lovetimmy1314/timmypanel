@@ -106,3 +106,34 @@
 可以随便写。
 
 - 代价：图片总量超过 64MB 的备份包导不进来，得先删点图。这个量级的个人导航站不存在。
+
+## 032 多搜索框只是「一份共用配置 + 若干个默认源」
+
+相关：`internal/model/settings.go`、`internal/api/setting.go`、
+`frontend/src/views/Home.vue`、`frontend/src/components/SearchBar.vue`、
+`frontend/src/components/settings/SearchPanel.vue`
+
+首页可以放不止一个搜索框（想同时挂着「站内 + Google + 磁力」这种），
+数据结构上**没有**把搜索框做成一等对象：`SearchConf` 里加的是
+`Bars []SearchBar`，而 `SearchBar` 只有 `enabled` 和 `default` 两个字段。
+引擎清单（`engines`）和配色（`style`）仍然整站一份，所有搜索框共用。
+主搜索框继续用 `SearchConf.Enabled` / `SearchConf.Default` 表达，不进 `bars`
+——老数据（没有 `bars` 键）因此天然就是「一个搜索框」，不需要迁移。
+
+- 代价一：**没法给某个搜索框单独配色或单独裁引擎清单**。真要做，得把 style 和
+  engines 也搬进 `SearchBar`，那时候 `SearchConf` 顶层那几个字段就成了历史包袱。
+  按当前需求（多开几个框、各自默认一个源）不值当。
+- 代价二：主搜索框和附加搜索框是两套字段，凡是要「遍历所有搜索框」的地方都得手工拼
+  （`Home.vue` 的 `searchBars` computed 就是干这个的，主搜索框记 `barIndex = -1`）。
+  点星星设默认引擎时按这个下标回写，`-1` 写 `search.default`，其余写 `bars[i].default`。
+
+**全局快捷键只归第一个搜索框。** `/` 和 `Ctrl+K` 原来由 `SearchBar` 自己
+`window.addEventListener` 认领，多开几个之后每个都会 focus 自己，最后谁赢全看注册顺序
+（表现为按 `/` 光标跳到最下面那个框）。所以加了 `hotkeys` prop，只有 `searchBars`
+里的第一个拿到 true；占位文案也跟着分两条，没有快捷键的框不提示「按 / 聚焦」。
+
+**站内搜索的关键词仍然只有一份。** 所有框的 `update:query` 都写进 `Home.vue` 的同一个
+`query`，也就是「最后敲字的那个框」决定卡片过滤。`SearchBar` 的两个 watch 都不是
+immediate，没人碰的框不会发事件，所以不会互相清空。多个框同时选「站内搜索」时，
+下面的卡片列表跟着最后动的那个走——这是刻意的，卡片列表只有一个，没有第二种解释。
+

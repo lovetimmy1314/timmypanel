@@ -8,13 +8,19 @@ import type { SelectOption } from 'naive-ui'
 import { t } from '@/i18n'
 import type { SearchEngine, Site } from '@/api/types'
 
-const props = defineProps<{
-  sites: Site[]
-  engines: SearchEngine[]
-  defaultEngine: string
-  network: 'wan' | 'lan'
-  barStyle?: { bg: string; color: string; border: string }
-}>()
+const props = withDefaults(
+  defineProps<{
+    sites: Site[]
+    engines: SearchEngine[]
+    defaultEngine: string
+    network: 'wan' | 'lan'
+    barStyle?: { bg: string; color: string; border: string }
+    // 全局快捷键（/ 与 Ctrl+K）只该有一个搜索框认领。页面上可以有多个搜索框，
+    // 都监听的话每个都会 focus 自己，最后是谁抢到全看注册顺序。
+    hotkeys?: boolean
+  }>(),
+  { hotkeys: false },
+)
 
 const wrapStyle = computed(() => {
   const s = props.barStyle
@@ -113,7 +119,9 @@ function onKeydown(e: KeyboardEvent) {
     inputRef.value?.blur()
   }
 }
-onMounted(() => window.addEventListener('keydown', onKeydown))
+onMounted(() => {
+  if (props.hotkeys) window.addEventListener('keydown', onKeydown)
+})
 onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
 const engineOptions = computed(() => [
@@ -168,7 +176,11 @@ function renderEngineOption({ node, option }: { node: VNode; option: SelectOptio
         ref="inputRef"
         v-model:value="query"
         :placeholder="
-          engine === 'local' ? t('search.placeholderLocal') : t('search.placeholderEngine', { engine })
+          engine !== 'local'
+            ? t('search.placeholderEngine', { engine })
+            : hotkeys
+              ? t('search.placeholderLocal')
+              : t('search.placeholderLocalPlain')
         "
         class="flex-1"
         :bordered="false"

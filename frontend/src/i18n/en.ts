@@ -87,6 +87,7 @@ export const en: Record<MessageKey, string> = {
   'search.local': 'This site',
   'search.engine': 'Engine',
   'search.placeholderLocal': 'Search your saved sites… (press / to focus)',
+  'search.placeholderLocalPlain': 'Search your saved sites…',
   'search.placeholderEngine': 'Search with {engine}…',
   'search.setDefault': 'Set as the default search engine',
 
@@ -199,7 +200,7 @@ export const en: Record<MessageKey, string> = {
   'settings.nav.appearance': 'Appearance',
   'settings.nav.appearanceDesc': 'Logo, clock, search bar, wallpaper and footer',
   'settings.nav.search': 'Search',
-  'settings.nav.searchDesc': 'Search engines and the default source',
+  'settings.nav.searchDesc': 'Search bars, engines and default sources',
   'settings.nav.groups': 'Groups',
   'settings.nav.groupsDesc': 'Add, rename and reorder groups',
   'settings.nav.backfill': 'Backfill',
@@ -257,8 +258,12 @@ export const en: Record<MessageKey, string> = {
   'appearance.pickBgTitle': 'Pick a wallpaper from the gallery',
 
   // search settings
+  'searchSet.bars': 'Search bars',
+  'searchSet.showBar': 'Show search bar',
+  'searchSet.addBar': '＋ Add search bar',
+  'searchSet.barsHint': 'Each bar picks its own default source. Extra bars stack below the first one on the home page, up to 8.',
   'searchSet.default': 'Default source',
-  'searchSet.defaultHint': 'Whether the search bar shows, and its colors, live under Appearance.',
+  'searchSet.defaultHint': 'Search bar colors live under Appearance.',
   'searchSet.engines': 'Search engines',
   'searchSet.engineName': 'Name',
   'searchSet.addEngine': '＋ Add engine',

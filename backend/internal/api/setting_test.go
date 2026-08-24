@@ -108,6 +108,47 @@ func TestNormalizeSearchDefaultFallsBack(t *testing.T) {
 	}
 }
 
+// 附加搜索框和主搜索框走同一套「默认搜索源」归一化，且条数要有上限
+// （它们和引擎清单一样存在设置那一行 JSON 里）。
+func TestNormalizeSearchBars(t *testing.T) {
+	in := model.DefaultSettings()
+	in.Search.Bars = []model.SearchBar{
+		{Enabled: true, Default: "Bing"},
+		{Enabled: false, Default: "不存在的引擎"},
+		{Enabled: true, Default: ""},
+	}
+	normalizeSettings(&in)
+	if len(in.Search.Bars) != 3 {
+		t.Fatalf("搜索框数 = %d，期望 3", len(in.Search.Bars))
+	}
+	if in.Search.Bars[0].Default != "Bing" {
+		t.Errorf("仍在清单里的默认引擎被改成了 %q", in.Search.Bars[0].Default)
+	}
+	if in.Search.Bars[1].Default != "local" || in.Search.Bars[2].Default != "local" {
+		t.Errorf("悬空/空的默认源没回落到 local：%+v", in.Search.Bars)
+	}
+	if in.Search.Bars[1].Enabled {
+		t.Errorf("enabled 不该被改动")
+	}
+
+	in = model.DefaultSettings()
+	for i := 0; i < maxSearchBars*3; i++ {
+		in.Search.Bars = append(in.Search.Bars, model.SearchBar{Enabled: true, Default: "local"})
+	}
+	normalizeSettings(&in)
+	if n := len(in.Search.Bars); n != maxSearchBars {
+		t.Errorf("搜索框数 = %d，期望截到 %d", n, maxSearchBars)
+	}
+
+	// nil 会序列化成 null，而 PUT 的返回值直接喂给前端 store。
+	in = model.DefaultSettings()
+	in.Search.Bars = nil
+	normalizeSettings(&in)
+	if in.Search.Bars == nil {
+		t.Errorf("bars 归一化后仍是 nil")
+	}
+}
+
 // 设置整块存一行 JSON 且每次进首页都全量拉回来，所以引擎清单必须有上限。
 // icon 前端连编辑入口都没有，形状对不上直接清空。
 func TestNormalizeSearchEngineLimits(t *testing.T) {

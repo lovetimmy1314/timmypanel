@@ -57,6 +57,9 @@ const (
 	maxSearchEngines   = 32
 	maxEngineNameRunes = 32
 	maxEngineURLBytes  = 512
+	// 附加搜索框的条数上限。它们都渲染在首页主搜索框下面，多到这个数字已经没法看了，
+	// 上限在这儿主要还是防「一次 PUT 把设置这一行撑大」。
+	maxSearchBars = 8
 )
 
 // engineIconPattern 收紧引擎图标名。前端只会把它当 iconify 图标名用，而图标集
@@ -89,6 +92,20 @@ func safeCSSColor(v string) bool {
 		}
 	}
 	return true
+}
+
+// normalizeEngineName 把「默认搜索源」收回到 local 或某个确实存在的引擎名上。
+// 用户删掉当前默认引擎之后这个字段会悬空，搜索栏会选中一个不存在的项。
+func normalizeEngineName(name string, engines []model.SearchEngine) string {
+	if name == "" || name == "local" {
+		return "local"
+	}
+	for _, e := range engines {
+		if e.Name == name {
+			return name
+		}
+	}
+	return "local"
 }
 
 // normalizeSettings 收紧用户提交的设置：数值夹到合理区间，背景地址只允许
@@ -204,22 +221,19 @@ func normalizeSettings(in *model.Settings) {
 	if len(in.Search.Engines) == 0 {
 		in.Search.Engines = model.DefaultSettings().Search.Engines
 	}
-	if in.Search.Default == "" {
-		in.Search.Default = "local"
+	in.Search.Default = normalizeEngineName(in.Search.Default, in.Search.Engines)
+
+	// 附加搜索框：每个只有「显不显示」和「默认搜索源」，引擎清单和配色是共用的。
+	if len(in.Search.Bars) > maxSearchBars {
+		in.Search.Bars = in.Search.Bars[:maxSearchBars]
 	}
-	// 删掉当前默认引擎后 default 会悬空，搜索栏选中一个不存在的项。
-	if in.Search.Default != "local" {
-		found := false
-		for _, e := range in.Search.Engines {
-			if e.Name == in.Search.Default {
-				found = true
-				break
-			}
-		}
-		if !found {
-			in.Search.Default = "local"
-		}
+	bars := make([]model.SearchBar, 0, len(in.Search.Bars))
+	for _, b := range in.Search.Bars {
+		b.Default = normalizeEngineName(b.Default, in.Search.Engines)
+		bars = append(bars, b)
 	}
+	// 必须是空数组而不是 nil：nil 会序列化成 null，而 PUT 的返回值直接喂给前端 store。
+	in.Search.Bars = bars
 	if in.Search.Style.Bg != "" && !safeCSSColor(in.Search.Style.Bg) {
 		in.Search.Style.Bg = ""
 	}

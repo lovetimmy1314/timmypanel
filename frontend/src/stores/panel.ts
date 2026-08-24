@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS: Settings = {
     groupStyle: 'section',
     footerHtml: '',
   },
-  search: { enabled: true, default: 'local', engines: [], style: { bg: '', color: '', border: '' } },
+  search: { enabled: true, default: 'local', engines: [], bars: [], style: { bg: '', color: '', border: '' } },
   theme: 'auto',
   language: 'zh',
   network: 'wan',
@@ -71,6 +71,8 @@ export const usePanelStore = defineStore('panel', () => {
         search: {
           ...DEFAULT_SETTINGS.search,
           ...st.search,
+          // 老账号的设置里没有 bars，服务端也可能吐 null：展开进来会把默认的空数组盖掉。
+          bars: st.search?.bars ?? [],
           style: { ...DEFAULT_SETTINGS.search.style, ...st.search?.style },
         },
       }

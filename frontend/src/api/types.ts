@@ -39,6 +39,12 @@ export interface SearchEngine {
   icon: string
 }
 
+// 附加搜索框：只有「显不显示」和「默认搜索源」，引擎清单和配色跟主搜索框共用。
+export interface SearchBar {
+  enabled: boolean
+  default: string
+}
+
 export interface Settings {
   background: {
     type: 'image' | 'color' | 'gradient'
@@ -61,6 +67,7 @@ export interface Settings {
     enabled: boolean
     default: string
     engines: SearchEngine[]
+    bars: SearchBar[]
     style: { bg: string; color: string; border: string }
   }
   theme: 'auto' | 'light' | 'dark'
