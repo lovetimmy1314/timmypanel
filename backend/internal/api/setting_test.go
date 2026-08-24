@@ -229,3 +229,18 @@ func TestNormalizeWeatherConf(t *testing.T) {
 		t.Fatal("截断后不是合法 UTF-8")
 	}
 }
+
+func TestNormalizeCalendarConf(t *testing.T) {
+	for _, in := range []string{"", "monday", "MON", "周一", "sunday"} {
+		cal := model.CalendarConf{WeekStart: in}
+		normalizeCalendarConf(&cal)
+		if cal.WeekStart != "mon" {
+			t.Errorf("weekStart=%q 应回落成 mon，得到 %q", in, cal.WeekStart)
+		}
+	}
+	cal := model.CalendarConf{WeekStart: "sun"}
+	normalizeCalendarConf(&cal)
+	if cal.WeekStart != "sun" {
+		t.Error("合法值 sun 被改掉了")
+	}
+}

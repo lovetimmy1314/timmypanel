@@ -126,6 +126,14 @@ func normalizeWeatherConf(w *model.WeatherConf) {
 	w.Lon = roundCoord(math.Max(-180, math.Min(180, w.Lon)))
 }
 
+// normalizeCalendarConf 收紧万年历配置。只有一个枚举字段，但仍然要收
+// ——前端能发上来的任何字符串都会原样回给所有客户端。
+func normalizeCalendarConf(cal *model.CalendarConf) {
+	if cal.WeekStart != "sun" {
+		cal.WeekStart = "mon"
+	}
+}
+
 // normalizeEngineName 把「默认搜索源」收回到 local 或某个确实存在的引擎名上。
 // 用户删掉当前默认引擎之后这个字段会悬空，搜索栏会选中一个不存在的项。
 func normalizeEngineName(name string, engines []model.SearchEngine) string {
@@ -222,6 +230,7 @@ func normalizeSettings(in *model.Settings) {
 	}
 
 	normalizeWeatherConf(&in.Weather)
+	normalizeCalendarConf(&in.Calendar)
 
 	// 就地过滤：engines 和 in.Search.Engines 共用底层数组，写下标永远不超过读下标。
 	engines := in.Search.Engines[:0]

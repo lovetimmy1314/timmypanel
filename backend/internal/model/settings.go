@@ -72,19 +72,27 @@ type WeatherConf struct {
 	Unit         string  `json:"unit"` // c | f，只影响显示，接口一律回摄氏度
 }
 
+// CalendarConf 是首页右上角那个悬浮万年历的配置。农历、节气、节日全在后端算
+// （决策 034），这里只有显示相关的两项。
+type CalendarConf struct {
+	Enabled   bool   `json:"enabled"`
+	WeekStart string `json:"weekStart"` // mon | sun，月面板从周一还是周日起排
+}
+
 // EngineSeedVersion 是内置搜索引擎清单的版本号。往 DefaultSettings 里加内置引擎时
 // 必须 +1，否则老账号看不到新引擎（它们的 engines 数组非空，不会回落到默认值）。
 const EngineSeedVersion = 1
 
 // Settings 是一个用户的全部界面设置。
 type Settings struct {
-	Background Background  `json:"background"`
-	Layout     Layout      `json:"layout"`
-	Search     SearchConf  `json:"search"`
-	Weather    WeatherConf `json:"weather"`
-	Theme      string      `json:"theme"`    // auto | light | dark
-	Language   string      `json:"language"` // zh | en
-	Network    string      `json:"network"`  // wan | lan
+	Background Background   `json:"background"`
+	Layout     Layout       `json:"layout"`
+	Search     SearchConf   `json:"search"`
+	Weather    WeatherConf  `json:"weather"`
+	Calendar   CalendarConf `json:"calendar"`
+	Theme      string       `json:"theme"`    // auto | light | dark
+	Language   string       `json:"language"` // zh | en
+	Network    string       `json:"network"`  // wan | lan
 	// EngineSeed 是服务端记账字段，记录这份设置已经补过哪一版的内置引擎。
 	// 前端不认识也不该发它（types.ts 里故意没有），保存时由 handlePutSettings 盖成当前值。
 	EngineSeed int `json:"engineSeed"`
@@ -119,7 +127,9 @@ func DefaultSettings() Settings {
 		},
 		// 默认开着但没有城市：卡片这时显示一个「选择城市」的入口，不发任何请求，
 		// 也不弹浏览器定位授权。默认关掉的话这个功能等于藏起来了，没人会知道它在。
-		Weather:    WeatherConf{Enabled: true, LocationMode: "manual", Unit: "c"},
+		Weather: WeatherConf{Enabled: true, LocationMode: "manual", Unit: "c"},
+		// 万年历默认开着：它不发任何出站请求，也不需要用户先配点什么才有内容。
+		Calendar:   CalendarConf{Enabled: true, WeekStart: "mon"},
 		Theme:      "auto",
 		Language:   "zh",
 		Network:    "wan",
@@ -175,6 +185,11 @@ func (s *Setting) Decode() Settings {
 	}
 	if out.Weather.Unit == "" {
 		out.Weather.Unit = "c"
+	}
+	// 老数据没有 calendar 这一块：enabled 保持 DefaultSettings 里的 true（out 是
+	// 默认值打底），weekStart 得在这儿补，否则前端拿到空串排不出这个月的格子。
+	if out.Calendar.WeekStart == "" {
+		out.Calendar.WeekStart = "mon"
 	}
 	if out.Layout.CardSize == "" {
 		out.Layout.CardSize = "md"

@@ -87,6 +87,9 @@ func (s *Server) Register(r *gin.Engine) {
 			authed.GET("/weather", s.handleWeather)
 			authed.GET("/weather/geocode", s.handleWeatherGeocode)
 
+			// 万年历：纯计算，年月由前端按本地时区算好传上来（决策 034）。
+			authed.GET("/calendar/month", s.handleCalendarMonth)
+
 			authed.GET("/settings", s.handleGetSettings)
 			authed.PUT("/settings", s.handlePutSettings)
 
