@@ -187,8 +187,15 @@ func TestDayTypeOf(t *testing.T) {
 		{"2025-10-05", "off"}, // 假期盖住的周末也是「休」
 		{"2025-09-28", "work"},
 		{"2025-10-11", "work"},
-		{"2025-08-24", ""}, // 普通周末不带角标
-		{"2030-10-01", ""}, // 没有这一年的数据
+		{"2025-08-24", ""},    // 普通周末不带角标
+		{"2030-10-01", ""},    // 没有这一年的数据
+		{"2026-02-15", "off"}, // 春节从腊月廿八放到正月初七，共 9 天
+		{"2026-02-23", "off"},
+		{"2026-02-24", ""},
+		{"2026-01-04", "work"}, // 元旦借了周五，补在周日
+		{"2026-02-14", "work"},
+		{"2026-02-28", "work"},
+		{"2026-09-20", "work"},
 		{"2024-02-10", "off"},
 		{"2024-02-18", "work"},
 		{"坏日期", ""},
@@ -206,6 +213,43 @@ func TestDayTypeOf(t *testing.T) {
 	}
 }
 
+// 调休表是手抄进来的，抄错的形式一律要在这儿现形：expandSpan 对写坏的条目
+// 是静默跳过的（编译期常量，不值得 panic），所以必须有人替它盯着。
+func TestHolidayTableWellFormed(t *testing.T) {
+	for year, conf := range holidayArrangements {
+		off := map[string]bool{}
+		for _, span := range conf.off {
+			days := expandSpan(year, span)
+			if len(days) == 0 {
+				t.Errorf("%d 年放假条目 %q 展不开，八成是写错了", year, span)
+			}
+			for _, d := range days {
+				if off[d] {
+					t.Errorf("%d 年 %s 在放假区间里出现了两次", year, d)
+				}
+				off[d] = true
+			}
+		}
+		for _, span := range conf.work {
+			days := expandSpan(year, span)
+			if len(days) == 0 {
+				t.Errorf("%d 年补班条目 %q 展不开，八成是写错了", year, span)
+			}
+			for _, d := range days {
+				// 同一天既放假又补班：buildHolidayTable 会让 work 赢，静默出错
+				if off[d] {
+					t.Errorf("%d 年 %s 既在放假区间里又要补班", year, d)
+				}
+			}
+		}
+		// 法定节假日一年 11 天，加上调休凑出来的周末也就二三十天。
+		// 数字离谱说明抄漏了一整段或者把区间写反了。
+		if len(off) < 11 || len(off) > 40 {
+			t.Errorf("%d 年放假天数 %d 天，不像是抄对了", year, len(off))
+		}
+	}
+}
+
 func TestMonthDays(t *testing.T) {
 	m := MonthDays(2026, 2)
 	if len(m.Items) != 28 {
@@ -218,8 +262,8 @@ func TestMonthDays(t *testing.T) {
 	if got := m.Items[16].GanZhi + m.Items[16].Zodiac; got != "丙午马" { // 2026-02-17 正月初一
 		t.Errorf("2026-02-17 干支生肖 = %s，期望 丙午马", got)
 	}
-	if m.HasHolidayData {
-		t.Error("2026 年目前没有调休数据，不该报有")
+	if !m.HasHolidayData {
+		t.Error("2026 年的调休数据已经录进表里了")
 	}
 	first := m.Items[0]
 	if first.Date != "2026-02-01" || first.Day != 1 || first.Weekday != 0 {
