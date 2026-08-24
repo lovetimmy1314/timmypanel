@@ -4,6 +4,7 @@
 package api
 
 import (
+	"math"
 	"regexp"
 	"strings"
 
@@ -92,6 +93,37 @@ func safeCSSColor(v string) bool {
 		}
 	}
 	return true
+}
+
+// maxWeatherCityRunes 是天气组件里城市显示名的长度上限。按字符截不按字节，
+// 中文地名切在多字节序列中间会写出坏 UTF-8（同 logoText，见下面那处注释）。
+const maxWeatherCityRunes = 32
+
+// roundCoord 把坐标截到小数点后两位（约 1 公里）。天气用不到更高的精度，
+// 而这个值会存进库、会跟着备份走，少存一点是一点。
+func roundCoord(v float64) float64 {
+	return math.Round(v*100) / 100
+}
+
+// normalizeWeatherConf 收紧天气配置。坐标是要被拼进上游 URL 的，非法值
+// （NaN、Inf、超出范围）必须在入库前就清掉，而不是等出站那一刻。
+func normalizeWeatherConf(w *model.WeatherConf) {
+	if w.LocationMode != "auto" {
+		w.LocationMode = "manual"
+	}
+	if w.Unit != "f" {
+		w.Unit = "c"
+	}
+	w.City = strings.TrimSpace(w.City)
+	if r := []rune(w.City); len(r) > maxWeatherCityRunes {
+		w.City = string(r[:maxWeatherCityRunes])
+	}
+	// NaN 和 Inf 的任何比较都为假，所以先单独挡掉，再夹区间。
+	if math.IsNaN(w.Lat) || math.IsInf(w.Lat, 0) || math.IsNaN(w.Lon) || math.IsInf(w.Lon, 0) {
+		w.Lat, w.Lon = 0, 0
+	}
+	w.Lat = roundCoord(math.Max(-90, math.Min(90, w.Lat)))
+	w.Lon = roundCoord(math.Max(-180, math.Min(180, w.Lon)))
 }
 
 // normalizeEngineName 把「默认搜索源」收回到 local 或某个确实存在的引擎名上。
@@ -188,6 +220,8 @@ func normalizeSettings(in *model.Settings) {
 	if in.Network != "lan" {
 		in.Network = "wan"
 	}
+
+	normalizeWeatherConf(&in.Weather)
 
 	// 就地过滤：engines 和 in.Search.Engines 共用底层数组，写下标永远不超过读下标。
 	engines := in.Search.Engines[:0]

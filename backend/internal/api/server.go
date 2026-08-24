@@ -25,6 +25,7 @@ type Server struct {
 	session *session.Manager
 	limiter *middleware.LoginLimiter
 	fetcher *service.Fetcher
+	weather *service.WeatherService
 	// ingestLimiter 限的是错误令牌的尝试，不是正常提交。
 	ingestLimiter *middleware.LoginLimiter
 	queues        ingestQueues
@@ -32,6 +33,7 @@ type Server struct {
 
 // NewServer 构造接口层。
 func NewServer(db *gorm.DB, cfg *config.Config) *Server {
+	fetcher := service.NewFetcher(cfg.Fetch.AllowPrivate, time.Duration(cfg.Fetch.TimeoutSec)*time.Second)
 	return &Server{
 		db:      db,
 		cfg:     cfg,
@@ -39,7 +41,9 @@ func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 		limiter: middleware.NewLoginLimiter(5, 15*time.Minute, 15*time.Minute),
 		// 令牌本身 64 位 hex 枚举不动，这个限流防的是拿泄露旧令牌反复试探。
 		ingestLimiter: middleware.NewLoginLimiter(10, 15*time.Minute, 15*time.Minute),
-		fetcher:       service.NewFetcher(cfg.Fetch.AllowPrivate, time.Duration(cfg.Fetch.TimeoutSec)*time.Second),
+		fetcher:       fetcher,
+		// 天气服务共用同一个 fetcher：SSRF 防护、超时和连接复用都在它身上。
+		weather: service.NewWeatherService(fetcher),
 	}
 }
 
@@ -78,6 +82,10 @@ func (s *Server) Register(r *gin.Engine) {
 			authed.POST("/sites/parse", s.handleParseSites)
 			authed.POST("/sites/bookmarks", s.handleParseBookmarks)
 			authed.POST("/sites/backfill", s.handleBackfillSites)
+
+			// 天气：后端代前端问上游并缓存，浏览器不直连（决策 033）。
+			authed.GET("/weather", s.handleWeather)
+			authed.GET("/weather/geocode", s.handleWeatherGeocode)
 
 			authed.GET("/settings", s.handleGetSettings)
 			authed.PUT("/settings", s.handlePutSettings)

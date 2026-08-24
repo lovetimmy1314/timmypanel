@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/sha1"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -167,6 +168,43 @@ func pickDialIP(ips []net.IP) net.IP {
 		}
 	}
 	return ips[0]
+}
+
+// GetJSON 发一个 GET 请求并把响应体解进 v。给「后端替前端去问一个第三方 JSON
+// 接口」这类需求用（天气就是这么走的）——CLAUDE.md 的硬约束：任何后端出站请求
+// 都必须复用 Fetcher，SSRF 防护挂在它的 DialContext 上，另起 http.Client 就绕过了。
+//
+// max 是响应体上限，读满就断：上游可以是任何东西，包括一条永不结束的流。
+func (f *Fetcher) GetJSON(rawURL string, max int64, v any) error {
+	target, err := url.Parse(rawURL)
+	if err != nil {
+		return err
+	}
+	if target.Scheme != "http" && target.Scheme != "https" {
+		return errors.New("只支持 http/https")
+	}
+	req, err := http.NewRequest(http.MethodGet, rawURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("Accept", "application/json")
+	resp, err := f.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("上游返回 %d", resp.StatusCode)
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, max))
+	if err != nil {
+		return err
+	}
+	if int64(len(body)) >= max {
+		return fmt.Errorf("上游响应超过 %d 字节", max)
+	}
+	return json.Unmarshal(body, v)
 }
 
 // Fetch 抓取页面并解析标题、描述和图标地址。

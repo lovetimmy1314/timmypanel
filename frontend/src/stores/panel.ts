@@ -22,6 +22,7 @@ const DEFAULT_SETTINGS: Settings = {
     footerHtml: '',
   },
   search: { enabled: true, default: 'local', engines: [], bars: [], style: { bg: '', color: '', border: '' } },
+  weather: { enabled: true, locationMode: 'manual', city: '', lat: 0, lon: 0, unit: 'c' },
   theme: 'auto',
   language: 'zh',
   network: 'wan',
@@ -75,6 +76,7 @@ export const usePanelStore = defineStore('panel', () => {
           bars: st.search?.bars ?? [],
           style: { ...DEFAULT_SETTINGS.search.style, ...st.search?.style },
         },
+        weather: { ...DEFAULT_SETTINGS.weather, ...st.weather },
       }
       // 服务端的语言是权威值，盖掉 localStorage 里那份起手值（见 src/i18n/index.ts）。
       setLocale(settings.value.language)

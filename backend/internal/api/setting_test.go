@@ -1,6 +1,7 @@
 package api
 
 import (
+	"math"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -187,5 +188,44 @@ func TestNormalizeSearchEngineLimits(t *testing.T) {
 		if e.Icon != "" {
 			t.Errorf("%q 的图标 %q 形状不对，应被清空", e.Name, e.Icon)
 		}
+	}
+}
+
+func TestNormalizeWeatherConf(t *testing.T) {
+	// 非法的 mode/unit 回落，城市名两头空白去掉。
+	w := model.WeatherConf{LocationMode: "gps", Unit: "k", City: "  北京  "}
+	normalizeWeatherConf(&w)
+	if w.LocationMode != "manual" || w.Unit != "c" || w.City != "北京" {
+		t.Fatalf("回落不对: %+v", w)
+	}
+
+	// 坐标越界夹回区间，并截到两位小数。
+	w = model.WeatherConf{Lat: 999, Lon: -181.23456}
+	normalizeWeatherConf(&w)
+	if w.Lat != 90 || w.Lon != -180 {
+		t.Fatalf("越界坐标没夹回区间: %+v", w)
+	}
+	w = model.WeatherConf{Lat: 39.907512, Lon: 116.397232}
+	normalizeWeatherConf(&w)
+	if w.Lat != 39.91 || w.Lon != 116.4 {
+		t.Fatalf("坐标没截到两位小数: %+v", w)
+	}
+
+	// NaN/Inf 的比较永远为假，夹区间挡不住它们，必须单独清零 ——
+	// 这个值最终要被拼进上游 URL。
+	w = model.WeatherConf{Lat: math.NaN(), Lon: math.Inf(1)}
+	normalizeWeatherConf(&w)
+	if w.Lat != 0 || w.Lon != 0 {
+		t.Fatalf("NaN/Inf 没被清掉: %+v", w)
+	}
+
+	// 城市名按字符截，不按字节：中文切在多字节序列中间会写出坏 UTF-8。
+	w = model.WeatherConf{City: strings.Repeat("城", 40)}
+	normalizeWeatherConf(&w)
+	if r := []rune(w.City); len(r) != maxWeatherCityRunes {
+		t.Fatalf("城市名应截到 %d 个字符，得到 %d", maxWeatherCityRunes, len(r))
+	}
+	if !utf8.ValidString(w.City) {
+		t.Fatal("截断后不是合法 UTF-8")
 	}
 }

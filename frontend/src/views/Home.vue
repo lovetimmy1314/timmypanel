@@ -13,11 +13,13 @@ import SettingsHub from '@/components/settings/SettingsHub.vue'
 import AccountDialog from '@/components/AccountDialog.vue'
 import BackTop from '@/components/BackTop.vue'
 import GroupJump from '@/components/GroupJump.vue'
+import WeatherFloat from '@/components/WeatherFloat.vue'
 import BrandMark from '@/components/BrandMark.vue'
 import { usePanelStore } from '@/stores/panel'
 import { useUserStore } from '@/stores/user'
 import { useSiteStore } from '@/stores/site'
 import { useThemeStore } from '@/stores/theme'
+import { useIsDesktop } from '@/composables/useIsDesktop'
 import { deepClone } from '@/utils/clone'
 import { dateLocale, locale, t } from '@/i18n'
 import type { Group, Settings, Site } from '@/api/types'
@@ -39,12 +41,25 @@ const query = ref('')
 const showEditor = ref(false)
 const showImport = ref(false)
 const showSettings = ref(false)
+// 设置弹窗打开时落在哪一栏。顶栏那个齿轮不指定，走默认的「个性化」。
+const settingsPanel = ref<'appearance' | 'weather'>('appearance')
+
+function openSettings(panelKey: 'appearance' | 'weather' = 'appearance') {
+  settingsPanel.value = panelKey
+  showSettings.value = true
+}
+
 const showAccount = ref(false)
 const editingSite = ref<Site | null>(null)
 // SiteEditor 的分组初值与锁定：从分组编辑按钮进的新建不带分组选择，
 // 默认落在当前分组（lockGroup=true 时编辑器直接不渲染分组那一项）。
 const editorGroupId = ref(0)
 const editorLockGroup = ref(false)
+
+// 天气组件：桌面端 + 设置里开着，两个条件都满足才挂载（决策 033）。
+// 手机上是**不挂载**，不是用 CSS 藏起来——藏起来的话它的轮询和请求照跑。
+const isDesktop = useIsDesktop()
+const showWeather = computed(() => isDesktop.value && panel.settings.weather.enabled)
 
 const isBoardEditing = (groupId: number) => editing.value || groupEditing.value === groupId
 
@@ -358,6 +373,7 @@ onMounted(async () => {
            允许换行，时钟另起一行（见 header 下方） -->
       <header
         class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3 sm:mb-6 tp-surface-glass rounded-2xl px-3 py-2.5"
+        :class="showWeather ? 'tp-header-gap-l' : ''"
       >
         <template v-if="panel.settings.layout.showLogo">
           <img
@@ -458,7 +474,7 @@ onMounted(async () => {
 
           <n-tooltip>
             <template #trigger>
-              <n-button quaternary circle @click="showSettings = true">
+              <n-button quaternary circle @click="openSettings()">
                 <Icon icon="mdi:cog-outline" class="text-lg tp-text" />
               </n-button>
             </template>
@@ -672,8 +688,12 @@ onMounted(async () => {
       @saved="refreshAll"
     />
     <ImportDialog v-model:show="showImport" :groups="panel.groups" @imported="refreshAll" />
-    <SettingsHub v-model:show="showSettings" @changed="refreshAll" />
+    <SettingsHub v-model:show="showSettings" :initial="settingsPanel" @changed="refreshAll" />
     <AccountDialog v-model:show="showAccount" />
+
+    <!-- 左上角悬浮天气。只在桌面端挂载：手机上不该有这个组件，也不该有它的请求 -->
+    <WeatherFloat v-if="showWeather" @configure="openSettings('weather')" />
+
     <BackTop />
     <GroupJump :boards="visibleBoards" @jump="jumpToGroup" />
   </div>

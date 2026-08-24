@@ -24,9 +24,10 @@ It ships as **one executable plus one data directory**. The web UI is compiled i
 - Search your own cards, plus optional external engines (Google, Bing, Baidu, …); stack several search bars, each with its own default source
 - Dual addresses on a card (public + LAN) and one button to flip the whole panel
 - Light / dark theme; image, solid or gradient wallpapers
+- Floating weather widget in the top-left corner on desktop (optional, never shown on phones): pick a city or use browser geolocation — the server fetches and caches it, your browser never talks to the weather API
 - Chinese and English UI; works on phones; can be added to the home screen
 - Isolated accounts; JSON / ZIP backup and restore; daily snapshots on the server
-- No third-party requests at runtime — icon sets are bundled, not fetched from a CDN
+- No third-party requests from the browser — icon sets are bundled, not fetched from a CDN. With the weather widget on, the outbound call happens on the server
 
 ## Deploy
 

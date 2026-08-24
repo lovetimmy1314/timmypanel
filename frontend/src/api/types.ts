@@ -70,9 +70,40 @@ export interface Settings {
     bars: SearchBar[]
     style: { bg: string; color: string; border: string }
   }
+  weather: {
+    enabled: boolean
+    // auto 时坐标由浏览器定位给出（只落 localStorage），拿不到就回落到下面这个城市。
+    locationMode: 'manual' | 'auto'
+    city: string
+    lat: number
+    lon: number
+    unit: 'c' | 'f'
+  }
   theme: 'auto' | 'light' | 'dark'
   language: 'zh' | 'en'
   network: 'wan' | 'lan'
+}
+
+// GET /weather 的返回。温度一律摄氏度，换算成华氏是前端的事。
+export interface Weather {
+  tempC: number
+  feelsLikeC: number
+  code: number // WMO weather code
+  isDay: boolean
+  humidity: number
+  windKph: number
+  maxC: number | null // 上游偶尔不给当日区间，这时是 null，不是 0
+  minC: number | null
+  updatedAt: number // unix 秒
+}
+
+// GET /weather/geocode 的一条结果。
+export interface GeoPlace {
+  name: string
+  admin1: string
+  country: string
+  lat: number
+  lon: number
 }
 
 // 管理员编辑的实例级配置。siteIcon / loginBackground 存的是 /uploads/ 路径。

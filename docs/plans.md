@@ -7,119 +7,27 @@
 
 ## 进行中
 
-### 首页悬浮小组件：左上角天气 + 右上角万年历
+### 首页悬浮小组件：右上角万年历（第二次开工）
 
-首页左上角悬浮显示当地天气温度，右上角悬浮显示万年历（带农历和节假日），
-两个都能在设置里单独开关，**都只在 PC 端出现，移动端不渲染**，都要有动画。
+左上角天气已经做完（决策 033），这一节只剩万年历：右上角悬浮显示万年历，带农历和
+节假日，能在设置里开关，只在 PC 端出现，要有动画。
 
-**分两次开工**：第一次做天气（顺带把两个组件共用的悬浮层地基铺好），第二次做万年历。
-第二次开工时先回来读这一节，共同约定不再重复推导。
+**地基是现成的，照抄，别再推导一遍**：
 
-#### 共同约定（第一次定下，第二次照抄）
-
-- **「不在移动端显示」= 不挂载，不是 `hidden sm:block`。** 新增
-  `frontend/src/composables/useIsDesktop.ts`（`matchMedia('(min-width:1024px)')`，
-  监听 change），组件用 `v-if="isDesktop && enabled"`。用 CSS 藏起来的话，
-  手机上组件照样挂载、照样定时器跑、照样打接口——天气那个是真出站请求，白烧。
-- **悬浮定位会撞顶栏，靠让位解决。** 两个卡片都是 `position: fixed` 贴视口角
-  （左上 / 右上），而首页顶栏在 `max-w-7xl` 容器里，视口 1280 左右时容器占满宽，
-  卡片正好压在 logo 和右侧按钮上。所以：卡片挂到 `<body>` 级的固定层，同时给
-  `Home.vue` 的 `<header>` 在 `lg` 以上按开关状态加左右 padding（CSS 变量
-  `--tp-float-l` / `--tp-float-r`，由开关状态决定 0 还是卡片宽度）。
-  只压缩顶栏那一行，不推整页。
-- **样式外壳共用**：`style.css` 里加 `.tp-float-card`（毛玻璃 + 圆角 + 阴影 +
-  入场动画），两个组件都用它，明暗色一律走 `--tp-*` 变量，不写 `text-white`（决策 021）。
-- **动画统一守规矩**：所有动画包一层 `@media (prefers-reduced-motion: reduce)` 关掉。
-  动画一律 CSS（transform/opacity），不引动画库。
-- **设置项各自加各自的**，别在第一次就把万年历的字段一起塞进去（`Decode()` 天然
-  向前兼容，第二次加不需要迁移）。加字段的四处必须同步：
-  `backend/internal/model/settings.go`（结构体 + `DefaultSettings`）、
-  `backend/internal/api/setting.go`（`normalizeSettings` 收紧）、
-  `frontend/src/api/types.ts`（同构）、`frontend/src/stores/panel.ts`（本地默认值）。
-- 新用的 mdi 图标名写完跑一次 `npm run icons`。
-- 面向用户的功能 → `README.md` 和 `README.zh-CN.md` **两份都要改**。
-- 取舍写进 `docs/decisions.md`：天气那次预留 **033**，万年历那次预留 **034**。
-
----
-
-#### 第一次开工：左上角天气
-
-**数据从哪儿来**：Open-Meteo（免 key、免注册、有商用友好的免费额度）。
-两个上游地址：
-
-- 当前天气：`https://api.open-meteo.com/v1/forecast?latitude=..&longitude=..`
-  `&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,is_day,wind_speed_10m`
-  `&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`
-- 城市搜索（设置里选城市用）：
-  `https://geocoding-api.open-meteo.com/v1/search?name=<关键词>&count=8&language=zh`
-
-**浏览器不直连上游，一律经后端代理**。三个理由，缺一都能单独立住：
-CSP 的 `connect-src` 只有 `'self'`（决策 019），直连会被浏览器挡；
-直连等于把每个访客的 IP 送给第三方；服务端才能做缓存，不然每开一个标签页就出站一次。
-
-**先说风险**：后端抓取**不走代理**（见下面「已知限制」），所以部署在国内机器上时
-`api.open-meteo.com` 有可能直连不通——那样天气卡就一直是 `--`。这不是能在代码里
-解决的问题，功能照做，但接口失败必须是「静默显示 `--`」而不是弹窗报错，
-并且设置里能整个关掉。真遇上不通，换成部署机能直连的上游是后话。
-
-**后端**：
-
-- `internal/service/weather.go`：新建。**必须复用 `service.Fetcher`**（CLAUDE.md 的硬约束，
-  SSRF 防护挂在它的 `DialContext` 上）。Fetcher 现在只有 `Fetch`/`SaveIcon` 这类
-  专用方法，需要给它加一个通用的 `GetJSON(rawURL string, max int64, v any) error`
-  ——走同一个 transport 和超时，读满 `max`（256KB 足够）就断。
-- 缓存：坐标量化到小数点后 1 位（约 11km）当键，内存 map + `sync.RWMutex`，
-  TTL 10 分钟，条目数上限（比如 256，超了按最旧淘汰）。地理编码结果按关键词缓存 1 小时。
-- 端点（都在 `authed` 组里，跟着 CSRF 组走）：
-  - `GET /api/v1/weather?lat=&lon=` → `{city, tempC, feelsLikeC, code, isDay, humidity, windKph, maxC, minC, updatedAt}`
-  - `GET /api/v1/weather/geocode?q=` → `{items:[{name, admin1, country, lat, lon}]}`
-  - 上游挂了 / 超时：回 502 + 中文文案，**不要**把上游报文透给前端。
-- 设置字段 `Settings.Weather`：
-  `{enabled, locationMode: "auto"|"manual", city, lat, lon, unit: "c"|"f"}`。
-  `normalizeWeatherConf`：mode/unit 走白名单，`city` 截 32 runes，
-  lat 夹 [-90,90]、lon 夹 [-180,180] 并**截到 2 位小数**（~1km，够用且少留一点隐私）。
-- Go 单测（`conventions.md` 要求纯函数必须有）：`normalizeWeatherConf`、坐标量化、
-  上游 JSON → DTO 的解析（喂一段真实响应字面量，含 `current` 缺字段的残缺情况）。
-
-**定位怎么来**：`locationMode`
-
-- `manual`（默认）：设置里搜城市，存 city + lat/lon。没选过城市时卡片显示「去设置里选城市」。
-- `auto`：前端 `navigator.geolocation` 拿一次坐标（需 HTTPS + 用户授权），
-  结果只存 localStorage，**不入库**；拿不到就回落到 manual 的城市。
-
-**前端**：
-
-- `components/WeatherFloat.vue`：药丸态显示 图标 + 温度 + 城市；hover 展开体感/湿度/风/今日最高最低
-  （高度过渡）。10 分钟轮询一次，`visibilitychange` 回到前台且距上次超过 10 分钟才补一次
-  ——别做成一切页面切换就打接口。请求失败显示 `--` 并静默，不弹 message 刷屏。
-- `components/WeatherIcon.vue`：按 WMO weather_code 分 8 类
-  （晴 / 少云 / 阴 / 雾 / 毛毛雨·雨 / 雪 / 雷 / 未知）× 昼夜两态，**内联 SVG + CSS 动画**：
-  太阳转 + 光晕呼吸、云横向飘、雨滴下落、雪花飘落、闪电闪。mdi 是静态图标画不了这个，
-  所以这里自绘；设置面板里的入口图标仍用 mdi。
-- 设置面板：`components/settings/WeatherPanel.vue`，进 `SettingsHub` 的 entries
-  （图标 `mdi:weather-partly-cloudy`）。里面有：开关、定位方式、城市搜索（打 geocode 端点）、
-  单位 ℃/℉。i18n 两份词典各补一份 key。
-
-**收尾**：`decisions.md` 追加 033（为什么走后端代理、为什么不挂 CSS 隐藏、
-Fetcher 加通用 GetJSON 的代价）；README 中英两份各加一句功能说明；
-把下面这几条搬进 `plans.md` 末尾的验证清单；提交。
-
-**这次要验的**：
-
-| 检查 | 期望 |
-|---|---|
-| 浏览器窗口拖窄到 <1024px | 天气卡消失，且网络面板里不再有 `/weather` 请求（不是只藏起来） |
-| 关掉设置里的天气开关 | 卡片消失，顶栏 padding 跟着还原，不留一块空白 |
-| 网络面板过滤 `open-meteo` | 一条都没有（浏览器不直连上游） |
-| 未登录打 `/api/v1/weather` | 401 |
-| 同一坐标连打 5 次 `/api/v1/weather` | 只有第一次出站（后面走缓存），响应 `updatedAt` 不变 |
-| 断网 / 上游超时 | 接口 502 中文文案，卡片显示 `--`，控制台不刷错 |
-| 设置里把 lat 填成 999 | 被夹回 90 |
-| 系统开「减弱动态效果」 | 图标和入场动画停掉，内容照常显示 |
-
----
-
-#### 第二次开工：右上角万年历
+- **「不在移动端显示」= 不挂载**：`frontend/src/composables/useIsDesktop.ts` + `v-if`。
+  用 CSS 藏起来的话组件照样挂载、定时器照样跑、接口照样打。
+- 悬浮外壳直接用 `style.css` 里的 `.tp-float` + `.tp-float-tr` + `.tp-float-card`
+  （右上角那套 `tp-float-in-right` 入场动画已经写好），详情展开可复用
+  `.tp-float-detail` 那组过渡类。
+- 顶栏让位用 `.tp-header-gap-r`（已有，148px），在 `Home.vue` 的 `<header>` 上按开关加。
+- 设置字段要同步的四处：`model/settings.go`（结构体 + `DefaultSettings` + `Decode` 补默认）、
+  `api/setting.go` 的 `normalizeSettings`、`api/types.ts`、`stores/panel.ts`（默认值 + `loadAll`
+  里那次展开合并）。
+- 设置面板照 `components/settings/WeatherPanel.vue` 写一个 `CalendarPanel.vue`，
+  加进 `SettingsHub` 的 `PanelKey` 和 `entries`；卡片上要「点一下直接跳到这一栏」的话，
+  用 `SettingsHub` 的 `initial` prop（已有，天气那个「选择城市」就是这么跳的）。
+- 动画一律 CSS transform/opacity，并包一层 `@media (prefers-reduced-motion: reduce)`。
+- 面向用户的功能 → `README.md` 和 `README.zh-CN.md` 两份都改；取舍写进决策 **034**。
 
 **农历算在后端，不在前端。** 理由：农历/节气转换正是 `conventions.md` 里
 「解析类纯函数必须有 Go 单测」点名的那类东西，放后端才有测试兜着；节假日表跟着
@@ -149,16 +57,15 @@ Fetcher 加通用 GetJSON 的代价）；README 中英两份各加一句功能�
   点击展开当月面板——今天高亮、每格公历大字 + 农历小字、节日/节气标色、
   休/班角标、上下月切换、「回到今天」。展开用 scale+fade 过渡，翻月用左右滑动过渡。
 - 数据缓存在组件里按 `y-m` 存，翻过的月份不重复请求；跨零点自动刷新当天。
-- 设置字段 `Settings.Calendar`：`{enabled, weekStart: "mon"|"sun"}`，
-  面板 `components/settings/CalendarPanel.vue`（图标 `mdi:calendar-month-outline`）。
+- 设置字段 `Settings.Calendar`：`{enabled, weekStart: "mon"|"sun"}`。
 
-**收尾**：`decisions.md` 追加 034；README 两份；验证清单；提交。
+**收尾**：`decisions.md` 追加 034；README 两份；把下面这几条搬进末尾的验证清单；提交。
 
 **这次要验的**：
 
 | 检查 | 期望 |
 |---|---|
-| 窗口 <1024px | 万年历卡消失，且不再打 `/calendar/month` |
+| 窗口 <1024px 时**刷新页面** | 万年历卡不出现，且不打 `/calendar/month` |
 | 卡片显示的农历 | 与手机系统日历同一天一致（春节、闰月年各抽查一天） |
 | 把系统时区改成 UTC+0 再看 | 「今天」仍是本地日期（月份是前端算好传上去的） |
 | 翻到没有调休数据的年份 | 节日名照常显示，班/休角标一个不出现（不是显示错的） |
@@ -182,6 +89,7 @@ Fetcher 加通用 GetJSON 的代价）；README 中英两份各加一句功能�
 **后端抓取不走代理。** `NewFetcher` 自建 `http.Transport` 时没设 `Proxy` 字段
 （Go 语义：nil = 不用代理），所以 `HTTP_PROXY` 这类环境变量对它无效。
 后果是「浏览器能打开、后端抓不到」——被墙的站点在国内机器上部署时就是这样。
+天气组件的上游（`api.open-meteo.com`）也走这条路，连不上就一直显示 `--`。
 按「部署在能直连目标站点的机器上」来解决；真要加代理支持，注意它和决策 003 的冲突
 （SSRF 防护是挂在 `DialContext` 上的，走了代理就等于把选址权交给代理，见决策 016 的「代价」）。
 
@@ -241,6 +149,15 @@ cd frontend && npm run typecheck
 | 连着覆盖导入 N 次（N > `backup.keep`） | `data/backups` 里 `-before-import-` 只剩 keep 份，且 `-auto-` 那批一份没少 |
 | `TP_SECURE=yes` 启动 | 日志有一条 WARN，配置文件里的值原样保留（**不是**静默变 false） |
 | 管理页用户列表 | 卡片/分组数正确，且一个记录都没有的新账号显示 0 而不是漏行 |
+| 窗口 <1024px 时刷新首页 | 左上角天气卡不出现，网络面板里**一条** `/weather` 都没有（不是只藏起来） |
+| 桌面宽度下开着天气 | 顶栏左侧留出一块，logo 没被盖住；关掉开关后这块留白跟着消失 |
+| 网络面板过滤 `open-meteo` | 一条请求都不该有（浏览器不直连上游，决策 033） |
+| 未登录打 `/api/v1/weather` | 401 |
+| 同一坐标连打几次 `/api/v1/weather` | 只有第一次出站，之后 `updatedAt` 不变、耗时降到毫秒级 |
+| `/api/v1/weather?lat=999&lon=1` | 400「坐标不合法」（不是 502） |
+| 断网或上游不通 | 接口 502 中文文案，卡片显示 `--`，**不弹 message** |
+| 设置里搜城市选一条再保存 | 库里的 `lat/lon` 被截到两位小数，卡片立刻换成新城市的天气 |
+| 系统开「减弱动态效果」 | 图标动画和入场动画停掉，内容照常显示 |
 
 提交前额外确认一条（不限于上面那几类改动）：
 

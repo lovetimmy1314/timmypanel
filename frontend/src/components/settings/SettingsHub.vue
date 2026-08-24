@@ -13,14 +13,16 @@ import BackupPanel from './BackupPanel.vue'
 import GalleryPanel from './GalleryPanel.vue'
 import SiteConfigPanel from './SiteConfigPanel.vue'
 import SearchPanel from './SearchPanel.vue'
+import WeatherPanel from './WeatherPanel.vue'
 import AboutPanel from './AboutPanel.vue'
 
-const props = defineProps<{ show: boolean }>()
+const props = defineProps<{ show: boolean; initial?: PanelKey }>()
 const emit = defineEmits<{ 'update:show': [boolean]; changed: [] }>()
 
 type PanelKey =
   | 'appearance'
   | 'search'
+  | 'weather'
   | 'groups'
   | 'backfill'
   | 'bookmarklet'
@@ -34,10 +36,12 @@ const isAdmin = computed(() => userStore.user?.role === 'admin')
 
 const active = ref<PanelKey>('appearance')
 
+// 每次打开都回到默认那一栏。initial 让调用方直接落到某一栏——首页那个
+// 「选择城市」的悬浮入口点进来时，不该还要用户自己找天气设置在哪。
 watch(
   () => props.show,
   (open) => {
-    if (open) active.value = 'appearance'
+    if (open) active.value = props.initial ?? 'appearance'
   },
 )
 
@@ -46,6 +50,7 @@ const entries = computed(() =>
     [
       { key: 'appearance' as const, title: t('settings.nav.appearance'), desc: t('settings.nav.appearanceDesc'), icon: 'mdi:palette-outline' },
       { key: 'search' as const, title: t('settings.nav.search'), desc: t('settings.nav.searchDesc'), icon: 'mdi:magnify' },
+      { key: 'weather' as const, title: t('settings.nav.weather'), desc: t('settings.nav.weatherDesc'), icon: 'mdi:weather-partly-cloudy' },
       { key: 'groups' as const, title: t('settings.nav.groups'), desc: t('settings.nav.groupsDesc'), icon: 'mdi:folder-cog-outline' },
       { key: 'backfill' as const, title: t('settings.nav.backfill'), desc: t('settings.nav.backfillDesc'), icon: 'mdi:auto-fix' },
       { key: 'bookmarklet' as const, title: t('settings.nav.bookmarklet'), desc: t('settings.nav.bookmarkletDesc'), icon: 'mdi:bookmark-plus-outline' },
@@ -101,6 +106,7 @@ const current = computed(() => entries.value.find((e) => e.key === active.value)
 
         <AppearancePanel v-if="active === 'appearance'" @changed="emit('changed')" />
         <SearchPanel v-else-if="active === 'search'" @changed="emit('changed')" />
+        <WeatherPanel v-else-if="active === 'weather'" @changed="emit('changed')" />
         <GroupManager v-else-if="active === 'groups'" @changed="emit('changed')" />
         <BackfillPanel v-else-if="active === 'backfill'" @changed="emit('changed')" />
         <BookmarkletPanel v-else-if="active === 'bookmarklet'" />

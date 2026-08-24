@@ -59,18 +59,32 @@ type SearchConf struct {
 	Style   SearchStyle    `json:"style"`
 }
 
+// WeatherConf 是首页左上角那个悬浮天气组件的配置。坐标是给后端代理上游用的，
+// 城市名只用来显示——两者都由用户在设置里搜城市选定，或由浏览器定位写入。
+type WeatherConf struct {
+	Enabled bool `json:"enabled"`
+	// LocationMode 为 auto 时坐标由浏览器定位给出（只存在 localStorage，不入库），
+	// 拿不到就回落到这里存的城市。
+	LocationMode string  `json:"locationMode"` // manual | auto
+	City         string  `json:"city"`
+	Lat          float64 `json:"lat"`
+	Lon          float64 `json:"lon"`
+	Unit         string  `json:"unit"` // c | f，只影响显示，接口一律回摄氏度
+}
+
 // EngineSeedVersion 是内置搜索引擎清单的版本号。往 DefaultSettings 里加内置引擎时
 // 必须 +1，否则老账号看不到新引擎（它们的 engines 数组非空，不会回落到默认值）。
 const EngineSeedVersion = 1
 
 // Settings 是一个用户的全部界面设置。
 type Settings struct {
-	Background Background `json:"background"`
-	Layout     Layout     `json:"layout"`
-	Search     SearchConf `json:"search"`
-	Theme      string     `json:"theme"`    // auto | light | dark
-	Language   string     `json:"language"` // zh | en
-	Network    string     `json:"network"`  // wan | lan
+	Background Background  `json:"background"`
+	Layout     Layout      `json:"layout"`
+	Search     SearchConf  `json:"search"`
+	Weather    WeatherConf `json:"weather"`
+	Theme      string      `json:"theme"`    // auto | light | dark
+	Language   string      `json:"language"` // zh | en
+	Network    string      `json:"network"`  // wan | lan
 	// EngineSeed 是服务端记账字段，记录这份设置已经补过哪一版的内置引擎。
 	// 前端不认识也不该发它（types.ts 里故意没有），保存时由 handlePutSettings 盖成当前值。
 	EngineSeed int `json:"engineSeed"`
@@ -103,6 +117,9 @@ func DefaultSettings() Settings {
 			},
 			Bars: []SearchBar{},
 		},
+		// 默认开着但没有城市：卡片这时显示一个「选择城市」的入口，不发任何请求，
+		// 也不弹浏览器定位授权。默认关掉的话这个功能等于藏起来了，没人会知道它在。
+		Weather:    WeatherConf{Enabled: true, LocationMode: "manual", Unit: "c"},
 		Theme:      "auto",
 		Language:   "zh",
 		Network:    "wan",
@@ -150,6 +167,14 @@ func (s *Setting) Decode() Settings {
 	}
 	if out.Network == "" {
 		out.Network = "wan"
+	}
+	// 老数据没有 weather 这一块：enabled 会保持 DefaultSettings 里的 true（out 是
+	// 默认值打底），另外两个字符串字段得在这儿补，否则前端拿到空串会当成非法值。
+	if out.Weather.LocationMode == "" {
+		out.Weather.LocationMode = "manual"
+	}
+	if out.Weather.Unit == "" {
+		out.Weather.Unit = "c"
 	}
 	if out.Layout.CardSize == "" {
 		out.Layout.CardSize = "md"
