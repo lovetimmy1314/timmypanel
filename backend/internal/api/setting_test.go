@@ -228,6 +228,28 @@ func TestNormalizeWeatherConf(t *testing.T) {
 	if !utf8.ValidString(w.City) {
 		t.Fatal("截断后不是合法 UTF-8")
 	}
+
+	// 非法 provider 回落；host 剥 scheme、非白名单清空。
+	w = model.WeatherConf{Provider: "foo", QWeatherHost: "https://h2a9cf3mhs.xy.qweatherapi.com/", QWeatherKey: "  k  "}
+	normalizeWeatherConf(&w)
+	if w.Provider != "open-meteo" {
+		t.Fatalf("非法 provider 应回落 open-meteo，得到 %q", w.Provider)
+	}
+	if w.QWeatherHost != "h2a9cf3mhs.xy.qweatherapi.com" || w.QWeatherKey != "k" {
+		t.Fatalf("host/key 没归一化: %+v", w)
+	}
+
+	w = model.WeatherConf{Provider: "qweather", QWeatherHost: "evil.example", QWeatherKey: "k"}
+	normalizeWeatherConf(&w)
+	if w.Provider != "open-meteo" || w.QWeatherHost != "" {
+		t.Fatalf("非白名单 host 应清空并回落: %+v", w)
+	}
+
+	w = model.WeatherConf{Provider: "qweather", QWeatherHost: "h2a9cf3mhs.xy.qweatherapi.com", QWeatherKey: "k"}
+	normalizeWeatherConf(&w)
+	if w.Provider != "qweather" || w.QWeatherHost != "h2a9cf3mhs.xy.qweatherapi.com" {
+		t.Fatalf("齐了的和风凭据不该被改: %+v", w)
+	}
 }
 
 func TestNormalizeCalendarConf(t *testing.T) {

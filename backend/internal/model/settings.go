@@ -70,6 +70,11 @@ type WeatherConf struct {
 	Lat          float64 `json:"lat"`
 	Lon          float64 `json:"lon"`
 	Unit         string  `json:"unit"` // c | f，只影响显示，接口一律回摄氏度
+	// Provider 空 = 跟实例默认（yaml 配了和风就用，否则 Open-Meteo）。
+	// open-meteo 强制免 key；qweather 用下面的 Host/Key，缺一项回落。
+	Provider     string `json:"provider"`
+	QWeatherHost string `json:"qweatherHost"`
+	QWeatherKey  string `json:"qweatherKey"`
 }
 
 // CalendarConf 是首页右上角那个悬浮万年历的配置。农历、节气、节日全在后端算
@@ -127,7 +132,7 @@ func DefaultSettings() Settings {
 		},
 		// 默认开着但没有城市：卡片这时显示一个「选择城市」的入口，不发任何请求，
 		// 也不弹浏览器定位授权。默认关掉的话这个功能等于藏起来了，没人会知道它在。
-		Weather: WeatherConf{Enabled: true, LocationMode: "manual", Unit: "c"},
+		Weather: WeatherConf{Enabled: true, LocationMode: "manual", Unit: "c", Provider: "open-meteo"},
 		// 万年历默认开着：它不发任何出站请求，也不需要用户先配点什么才有内容。
 		Calendar:   CalendarConf{Enabled: true, WeekStart: "mon"},
 		Theme:      "auto",
@@ -185,6 +190,9 @@ func (s *Setting) Decode() Settings {
 	}
 	if out.Weather.Unit == "" {
 		out.Weather.Unit = "c"
+	}
+	if out.Weather.Provider == "" {
+		out.Weather.Provider = "open-meteo"
 	}
 	// 老数据没有 calendar 这一块：enabled 保持 DefaultSettings 里的 true（out 是
 	// 默认值打底），weekStart 得在这儿补，否则前端拿到空串排不出这个月的格子。

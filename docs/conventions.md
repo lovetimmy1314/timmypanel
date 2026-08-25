@@ -61,7 +61,7 @@
   `sanitizeFooterHTML`、`isOwnUploadPath`、`normalizeSiteConfig`、`uploadKind`、
   `uploadDiskPath`、`serveUploadRel`、`zipUploadRel`、`remapOwnUploadPath`、
    `(*Setting).Decode`、`safeDial` 的选址判定、`ResetPassword`、
-   `newIngestToken`/`ingestQueues`、`SaveIconData`、`normalizeQWeatherHost`、`validQWeatherHost`、
+   `newIngestToken`/`ingestQueues`、`SaveIconData`、`NormalizeQWeatherHost`、`ValidQWeatherHost`、
    `qweatherToWMO`、`(*qwCurrentResponse).toWeather`。这类逻辑出错最隐蔽、改动最频繁。
   新写一个这样的函数就顺手补一条用例，别攒着。
 - HTTP 层没有自动化测试，靠手工回归，清单在 `plans.md` 末尾。

@@ -34,7 +34,7 @@ func (s *Server) handleWeather(c *gin.Context) {
 		badRequest(c, "坐标不合法")
 		return
 	}
-	data, err := s.weather.Current(lat, lon)
+	data, err := s.weather.Current(lat, lon, s.weatherCreds(c))
 	if err != nil {
 		// 上游不通是常态（网络、限流、被墙），不值得记成 error，也别把上游的
 		// 原始错误吐给前端 —— 里面带着我们拼的完整 URL。
@@ -56,11 +56,24 @@ func (s *Server) handleWeatherGeocode(c *gin.Context) {
 		badRequest(c, "地点名过长")
 		return
 	}
-	items, err := s.weather.Geocode(middleware.UserID(c), q, c.Query("lang"))
+	items, err := s.weather.Geocode(middleware.UserID(c), q, c.Query("lang"), s.weatherCreds(c))
 	if err != nil {
 		slog.Warn("地点搜索失败", "err", err)
 		fail(c, http.StatusBadGateway, "地点搜索暂时不可用")
 		return
 	}
 	ok(c, gin.H{"items": items})
+}
+
+// weatherCreds 从当前用户设置里取和风凭据。provider 强制 open-meteo 时返回空，
+// 走免 key 上游；host+key 没齐也返回空，Current/Geocode 再回落到 yaml。
+func (s *Server) weatherCreds(c *gin.Context) service.QWeatherCreds {
+	w := s.loadSettings(middleware.UserID(c)).Weather
+	if w.Provider == "open-meteo" {
+		return service.QWeatherCreds{}
+	}
+	if w.Provider == "qweather" || (w.QWeatherHost != "" && w.QWeatherKey != "") {
+		return service.QWeatherCreds{Host: w.QWeatherHost, Key: w.QWeatherKey}
+	}
+	return service.QWeatherCreds{}
 }

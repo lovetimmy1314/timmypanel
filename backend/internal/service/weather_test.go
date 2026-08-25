@@ -339,17 +339,25 @@ func TestIsDaytime(t *testing.T) {
 	}
 }
 
-func TestProviderPrefix(t *testing.T) {
+func TestResolveCreds(t *testing.T) {
 	om := NewWeatherService(nil, "", "")
-	if om.providerPrefix() != "om" || om.useQWeather() {
+	if om.resolveCreds(QWeatherCreds{}).ok() {
 		t.Fatal("没配和风应走 Open-Meteo")
 	}
-	qw := NewWeatherService(nil, "h.xy.qweatherapi.com", "k")
-	if qw.providerPrefix() != "qw" || !qw.useQWeather() {
-		t.Fatal("host+key 齐了应走和风")
+	inst := NewWeatherService(nil, "h.xy.qweatherapi.com", "k")
+	got := inst.resolveCreds(QWeatherCreds{})
+	if !got.ok() || got.Host != "h.xy.qweatherapi.com" {
+		t.Fatalf("用户没配时应回落到 yaml: %+v", got)
+	}
+	user := inst.resolveCreds(QWeatherCreds{Host: "u.xy.qweatherapi.com", Key: "u"})
+	if user.Host != "u.xy.qweatherapi.com" {
+		t.Fatalf("用户凭据应压过 yaml: %+v", user)
 	}
 	half := NewWeatherService(nil, "h.xy.qweatherapi.com", "")
-	if half.useQWeather() {
+	if half.resolveCreds(QWeatherCreds{Host: "u.xy.qweatherapi.com", Key: ""}).ok() {
 		t.Fatal("缺 key 不该半开")
+	}
+	if providerPrefix(QWeatherCreds{}) != "om" || providerPrefix(QWeatherCreds{Host: "h", Key: "k"}) != "qw" {
+		t.Fatal("缓存键前缀不对")
 	}
 }

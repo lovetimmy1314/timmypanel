@@ -78,6 +78,9 @@ export interface Settings {
     lat: number
     lon: number
     unit: 'c' | 'f'
+    provider: 'open-meteo' | 'qweather'
+    qweatherHost: string
+    qweatherKey: string
   }
   calendar: {
     enabled: boolean

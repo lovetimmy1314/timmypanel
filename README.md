@@ -24,7 +24,7 @@ It ships as **one executable plus one data directory**. The web UI is compiled i
 - Search your own cards, plus optional external engines (Google, Bing, Baidu, …); stack several search bars, each with its own default source
 - Dual addresses on a card (public + LAN) and one button to flip the whole panel
 - Light / dark theme; image, solid or gradient wallpapers
-- Floating weather widget in the top-left corner on desktop (optional, never shown on phones): pick a city or district, or use browser geolocation — the server fetches and caches it from Open-Meteo by default (no key). To resolve Chinese districts more reliably, set QWeather in `config.yaml`; your browser never talks to the weather API
+- Floating weather widget in the top-left corner on desktop (optional, never shown on phones): pick a city or district, or use browser geolocation — the server fetches and caches it from Open-Meteo by default (no key). To resolve Chinese districts more reliably, switch to QWeather in the weather settings; your browser never talks to the weather API
 - Floating Chinese calendar in the top-right corner on desktop (optional, never shown on phones): lunar dates, the 24 solar terms and traditional festivals, with a full-month panel; public-holiday and make-up workday badges appear for the years covered by the published schedule
 - Chinese and English UI; works on phones; can be added to the home screen
 - Isolated accounts; JSON / ZIP backup and restore; daily snapshots on the server
@@ -187,10 +187,9 @@ fetch:
 backup:
   auto_daily: true
   keep: 7
-weather:                         # optional; omit the whole block to keep Open-Meteo
-  # provider: open-meteo         # force Open-Meteo even if a QWeather key is set
-  qweather_host: xxxxx.xx.qweatherapi.com   # from the QWeather console, no https://
-  qweather_key: ...              # API KEY (not JWT). Restart after changing
+weather:                         # optional instance-wide fallback; each account can also set QWeather in the UI
+  qweather_host: xxxxx.xx.qweatherapi.com
+  qweather_key: ...
 ```
 
 Deployment-related values can also be set with environment variables: `TP_LISTEN`, `TP_SECURE`, `TP_DATA_DIR`, `TP_TRUSTED_PROXIES` (comma separated), `TP_SECRET`, `TP_ADMIN_USER`, `TP_ADMIN_PASSWORD`, `TP_ALLOW_PRIVATE_FETCH`, `TP_WEATHER_PROVIDER`, `TP_QWEATHER_HOST`, `TP_QWEATHER_KEY`.

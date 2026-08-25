@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"timmypanel/internal/config"
 	"timmypanel/internal/middleware"
 	"timmypanel/internal/model"
 )
@@ -124,6 +125,24 @@ func normalizeWeatherConf(w *model.WeatherConf) {
 	}
 	w.Lat = roundCoord(math.Max(-90, math.Min(90, w.Lat)))
 	w.Lon = roundCoord(math.Max(-180, math.Min(180, w.Lon)))
+
+	w.Provider = strings.ToLower(strings.TrimSpace(w.Provider))
+	if w.Provider != "open-meteo" && w.Provider != "qweather" {
+		w.Provider = "open-meteo"
+	}
+	w.QWeatherHost = config.NormalizeQWeatherHost(w.QWeatherHost)
+	if !config.ValidQWeatherHost(w.QWeatherHost) {
+		w.QWeatherHost = ""
+	}
+	w.QWeatherKey = strings.TrimSpace(w.QWeatherKey)
+	if r := []rune(w.QWeatherKey); len(r) > 128 {
+		w.QWeatherKey = string(r[:128])
+	}
+	// 选了和风但没配齐：半开会让搜索和实况全 502。回落到免 key，界面上也能看出
+	// host/key 被清掉了。
+	if w.Provider == "qweather" && (w.QWeatherHost == "" || w.QWeatherKey == "") {
+		w.Provider = "open-meteo"
+	}
 }
 
 // normalizeCalendarConf 收紧万年历配置。只有一个枚举字段，但仍然要收

@@ -39,17 +39,17 @@ func qweatherToWMO(code int) int {
 	}
 }
 
-func (w *WeatherService) qweatherHeaders() map[string]string {
-	return map[string]string{"X-QW-Api-Key": w.qwKey}
+func qweatherHeaders(key string) map[string]string {
+	return map[string]string{"X-QW-Api-Key": key}
 }
 
-func (w *WeatherService) qweatherURL(path string) string {
-	return "https://" + w.qwHost + path
+func qweatherURL(host, path string) string {
+	return "https://" + host + path
 }
 
-func (w *WeatherService) currentQWeather(qlat, qlon float64) (*Weather, error) {
-	headers := w.qweatherHeaders()
-	currentURL := w.qweatherURL(fmt.Sprintf("/weather/v1/current/%.2f/%.2f", qlat, qlon))
+func (w *WeatherService) currentQWeather(qlat, qlon float64, creds QWeatherCreds) (*Weather, error) {
+	headers := qweatherHeaders(creds.Key)
+	currentURL := qweatherURL(creds.Host, fmt.Sprintf("/weather/v1/current/%.2f/%.2f", qlat, qlon))
 
 	var raw qwCurrentResponse
 	if err := w.fetcher.GetJSONHeader(currentURL, weatherBodyLimit, headers, &raw); err != nil {
@@ -61,7 +61,7 @@ func (w *WeatherService) currentQWeather(qlat, qlon float64) (*Weather, error) {
 	}
 
 	// 日预报失败不影响实况：最高最低和昼夜会缺，卡片照样能显示温度。
-	dailyURL := w.qweatherURL(fmt.Sprintf("/weather/v1/daily/%.2f/%.2f?days=1", qlat, qlon))
+	dailyURL := qweatherURL(creds.Host, fmt.Sprintf("/weather/v1/daily/%.2f/%.2f?days=1", qlat, qlon))
 	var daily qwDailyResponse
 	if err := w.fetcher.GetJSONHeader(dailyURL, weatherBodyLimit, headers, &daily); err == nil {
 		daily.apply(out, w.now())
@@ -69,14 +69,14 @@ func (w *WeatherService) currentQWeather(qlat, qlon float64) (*Weather, error) {
 	return out, nil
 }
 
-func (w *WeatherService) geocodeQWeather(query, lang string) ([]GeoPlace, error) {
+func (w *WeatherService) geocodeQWeather(query, lang string, creds QWeatherCreds) ([]GeoPlace, error) {
 	q := url.Values{}
 	q.Set("location", query)
 	q.Set("number", "8")
 	q.Set("lang", lang)
 
 	var raw qwGeoResponse
-	if err := w.fetcher.GetJSONHeader(w.qweatherURL("/geo/v2/city/lookup?"+q.Encode()), weatherBodyLimit, w.qweatherHeaders(), &raw); err != nil {
+	if err := w.fetcher.GetJSONHeader(qweatherURL(creds.Host, "/geo/v2/city/lookup?"+q.Encode()), weatherBodyLimit, qweatherHeaders(creds.Key), &raw); err != nil {
 		return nil, err
 	}
 	return raw.toPlaces()

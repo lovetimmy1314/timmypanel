@@ -123,6 +123,30 @@ async function save() {
           <n-radio-button value="f">°F</n-radio-button>
         </n-radio-group>
       </SettingsRow>
+      <SettingsRow :label="t('weather.provider')" :hint="t('weather.providerHint')" stack>
+        <n-radio-group v-model:value="draft.weather.provider" size="small">
+          <n-radio-button value="open-meteo">{{ t('weather.providerOpenMeteo') }}</n-radio-button>
+          <n-radio-button value="qweather">{{ t('weather.providerQWeather') }}</n-radio-button>
+        </n-radio-group>
+      </SettingsRow>
+      <template v-if="draft.weather.provider === 'qweather'">
+        <SettingsRow :label="t('weather.qweatherHost')" :hint="t('weather.qweatherHostHint')" stack>
+          <n-input
+            v-model:value="draft.weather.qweatherHost"
+            placeholder="xxxxx.xx.qweatherapi.com"
+            :maxlength="253"
+          />
+        </SettingsRow>
+        <SettingsRow :label="t('weather.qweatherKey')" :hint="t('weather.qweatherKeyHint')" stack>
+          <n-input
+            v-model:value="draft.weather.qweatherKey"
+            type="password"
+            show-password-on="click"
+            :maxlength="128"
+            autocomplete="off"
+          />
+        </SettingsRow>
+      </template>
     </SettingsSection>
 
     <SettingsSection :title="t('weather.location')">
@@ -178,7 +202,6 @@ async function save() {
         <p v-else-if="searched && !searching" class="mt-2 text-xs opacity-45">
           {{ t('weather.noResult') }}
         </p>
-        <p class="mt-2 text-xs opacity-45">{{ t('weather.providerHint') }}</p>
       </SettingsRow>
     </SettingsSection>
 

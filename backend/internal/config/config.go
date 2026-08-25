@@ -65,8 +65,7 @@ type Config struct {
 		Keep int `yaml:"keep"`
 	} `yaml:"backup"`
 
-	// Weather 是天气上游。默认空 = Open-Meteo（免 key）。
-	// host+key 都配了就改走和风（中国区县更全）；provider: open-meteo 可强制不用和风。
+	// Weather 是实例级和风回落。每个账号优先在设置里自己配；这里是给还没配的账号用的。
 	// omitempty：老配置没有这一块时不要因为零值就重写 yaml、把运维注释抹掉。
 	Weather struct {
 		// open-meteo | qweather。空且没配 host/key 时就是 Open-Meteo。
@@ -226,8 +225,8 @@ func (c *Config) normalize() {
 	if c.Weather.Provider != "open-meteo" && c.Weather.Provider != "qweather" {
 		c.Weather.Provider = ""
 	}
-	c.Weather.QWeatherHost = normalizeQWeatherHost(c.Weather.QWeatherHost)
-	if !validQWeatherHost(c.Weather.QWeatherHost) {
+	c.Weather.QWeatherHost = NormalizeQWeatherHost(c.Weather.QWeatherHost)
+	if !ValidQWeatherHost(c.Weather.QWeatherHost) {
 		c.Weather.QWeatherHost = ""
 	}
 	c.Weather.QWeatherKey = strings.TrimSpace(c.Weather.QWeatherKey)
@@ -238,10 +237,10 @@ func (c *Config) normalize() {
 
 const qweatherHostSuffix = ".qweatherapi.com"
 
-// normalizeQWeatherHost 把用户随手贴的 Host 收成纯主机名：去掉 scheme、路径、空白。
+// NormalizeQWeatherHost 把用户随手贴的 Host 收成纯主机名：去掉 scheme、路径、空白。
 // 带路径或端口的直接清空——这个值最终会拼进出站 URL，只收主机名才能跟
-// validQWeatherHost 的后缀白名单对上。
-func normalizeQWeatherHost(raw string) string {
+// ValidQWeatherHost 的后缀白名单对上。设置面板和 yaml 共用。
+func NormalizeQWeatherHost(raw string) string {
 	raw = strings.ToLower(strings.TrimSpace(raw))
 	raw = strings.TrimPrefix(raw, "https://")
 	raw = strings.TrimPrefix(raw, "http://")
@@ -252,9 +251,9 @@ func normalizeQWeatherHost(raw string) string {
 	return raw
 }
 
-// validQWeatherHost 只放行和风自己的域名。配置文件是管理员写的，但这个值
-// 会带着 API Key 出站，写错成别人的域名等于把密钥送出去。
-func validQWeatherHost(host string) bool {
+// ValidQWeatherHost 只放行和风自己的域名。这个值会带着 API Key 出站，
+// 写错成别人的域名等于把密钥送出去。
+func ValidQWeatherHost(host string) bool {
 	if host == "" || len(host) > 253 {
 		return false
 	}

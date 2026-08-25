@@ -70,10 +70,10 @@ type cacheEntry[T any] struct {
 type WeatherService struct {
 	fetcher *Fetcher
 	now     func() time.Time // 测试里替换掉，才能不睡觉就走到过期分支
-	// qwHost / qwKey 都非空才走和风。构造时由 config.UseQWeather 决定，
-	// 半开（只配了其中一个）在那一层就被挡掉了。
-	qwHost string
-	qwKey  string
+	// 实例级回落：用户设置没配齐和风时用 yaml 那一份。半开（只配了其中一个）
+	// 在 config.UseQWeather 就被挡掉了，这里同样要求成对。
+	fallbackHost string
+	fallbackKey  string
 
 	mu      sync.Mutex
 	weather map[string]cacheEntry[Weather]
@@ -81,26 +81,42 @@ type WeatherService struct {
 	quota   map[uint]*quotaWindow
 }
 
+// QWeatherCreds 是一次请求选用的和风凭据。Host 和 Key 都非空才走和风。
+type QWeatherCreds struct {
+	Host string
+	Key  string
+}
+
 // NewWeatherService 构造天气服务。fetcher 必须是全局那一个：SSRF 防护、超时和
-// 连接复用都挂在它身上。qwHost/qwKey 成对传入才会走和风，否则默认 Open-Meteo。
-func NewWeatherService(f *Fetcher, qwHost, qwKey string) *WeatherService {
+// 连接复用都挂在它身上。fallbackHost/Key 是 yaml 里的实例级回落，用户设置优先。
+func NewWeatherService(f *Fetcher, fallbackHost, fallbackKey string) *WeatherService {
 	return &WeatherService{
-		fetcher: f,
-		now:     time.Now,
-		qwHost:  qwHost,
-		qwKey:   qwKey,
-		weather: map[string]cacheEntry[Weather]{},
-		geo:     map[string]cacheEntry[[]GeoPlace]{},
-		quota:   map[uint]*quotaWindow{},
+		fetcher:      f,
+		now:          time.Now,
+		fallbackHost: fallbackHost,
+		fallbackKey:  fallbackKey,
+		weather:      map[string]cacheEntry[Weather]{},
+		geo:          map[string]cacheEntry[[]GeoPlace]{},
+		quota:        map[uint]*quotaWindow{},
 	}
 }
 
-func (w *WeatherService) useQWeather() bool {
-	return w.qwHost != "" && w.qwKey != ""
+func (c QWeatherCreds) ok() bool {
+	return c.Host != "" && c.Key != ""
 }
 
-func (w *WeatherService) providerPrefix() string {
-	if w.useQWeather() {
+func (w *WeatherService) resolveCreds(user QWeatherCreds) QWeatherCreds {
+	if user.ok() {
+		return user
+	}
+	if w.fallbackHost != "" && w.fallbackKey != "" {
+		return QWeatherCreds{Host: w.fallbackHost, Key: w.fallbackKey}
+	}
+	return QWeatherCreds{}
+}
+
+func providerPrefix(creds QWeatherCreds) string {
+	if creds.ok() {
 		return "qw"
 	}
 	return "om"
@@ -119,13 +135,15 @@ func ValidCoord(lat, lon float64) bool {
 }
 
 // Current 返回某个坐标的当前天气，10 分钟内的重复请求直接吃缓存。
-func (w *WeatherService) Current(lat, lon float64) (*Weather, error) {
+// user 是这次请求的用户凭据；没配齐就回落到实例级 yaml。
+func (w *WeatherService) Current(lat, lon float64, user QWeatherCreds) (*Weather, error) {
 	if !ValidCoord(lat, lon) {
 		return nil, errors.New("坐标不合法")
 	}
 	qlat, qlon := quantizeCoord(lat), quantizeCoord(lon)
+	creds := w.resolveCreds(user)
 	// 缓存键带上游前缀：切到和风之后不能把 Open-Meteo 那格的旧数据当新的用。
-	key := fmt.Sprintf("%s:%.2f,%.2f", w.providerPrefix(), qlat, qlon)
+	key := fmt.Sprintf("%s:%.2f,%.2f", providerPrefix(creds), qlat, qlon)
 
 	if v, hit := w.cachedWeather(key); hit {
 		return &v, nil
@@ -135,8 +153,8 @@ func (w *WeatherService) Current(lat, lon float64) (*Weather, error) {
 		out *Weather
 		err error
 	)
-	if w.useQWeather() {
-		out, err = w.currentQWeather(qlat, qlon)
+	if creds.ok() {
+		out, err = w.currentQWeather(qlat, qlon, creds)
 	} else {
 		out, err = w.currentOpenMeteo(qlat, qlon)
 	}
@@ -165,7 +183,7 @@ func (w *WeatherService) currentOpenMeteo(qlat, qlon float64) (*Weather, error) 
 }
 
 // Geocode 按名字搜地点（城市或区）。uid 用来限出站次数，命中缓存的搜索不消耗配额。
-func (w *WeatherService) Geocode(uid uint, query, lang string) ([]GeoPlace, error) {
+func (w *WeatherService) Geocode(uid uint, query, lang string, user QWeatherCreds) ([]GeoPlace, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
 		return nil, errors.New("请输入地点名")
@@ -173,7 +191,8 @@ func (w *WeatherService) Geocode(uid uint, query, lang string) ([]GeoPlace, erro
 	if lang != "en" {
 		lang = "zh"
 	}
-	key := w.providerPrefix() + "|" + lang + "|" + strings.ToLower(query)
+	creds := w.resolveCreds(user)
+	key := providerPrefix(creds) + "|" + lang + "|" + strings.ToLower(query)
 	if v, hit := w.cachedGeo(key); hit {
 		return v, nil
 	}
@@ -183,8 +202,8 @@ func (w *WeatherService) Geocode(uid uint, query, lang string) ([]GeoPlace, erro
 
 	var places []GeoPlace
 	var err error
-	if w.useQWeather() {
-		places, err = w.geocodeQWeather(query, lang)
+	if creds.ok() {
+		places, err = w.geocodeQWeather(query, lang, creds)
 	} else {
 		places, err = w.geocodeOpenMeteo(query, lang)
 	}

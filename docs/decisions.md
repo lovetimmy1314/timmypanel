@@ -258,17 +258,18 @@ CSS 藏起来的话组件照样挂载、定时器照样跑、接口照样打，�
 
 ## 036 天气上游默认可选：Open-Meteo 免 key，和风按需
 
-状态：生效。相关：`backend/internal/config/config.go`、`backend/internal/service/weather.go`、
-`backend/internal/service/qweather.go`、`backend/internal/service/fetcher.go`（`GetJSONHeader`）、
+状态：生效。相关：`backend/internal/config/config.go`、`backend/internal/model/settings.go`、
+`backend/internal/service/weather.go`、`backend/internal/service/qweather.go`、
+`frontend/src/components/settings/WeatherPanel.vue`、`frontend/src/components/WeatherFloat.vue`、
 决策 033、决策 035。
 
 天气要精确到中国的区，Open-Meteo 地理编码经常没有（决策 035 已经认了这个锅）。
-和风对中国区县全，但要开发者账号、独立 API Host 和 Key。所以默认不动，做成实例级可选项：
+和风对中国区县全，但要开发者账号、独立 API Host 和 Key。所以默认不动，做成设置里的可选项：
 
-**默认 Open-Meteo，host+key 都配齐才切和风。** 配置在 `config.yaml` 的 `weather` 段
-（或 `TP_QWEATHER_HOST` / `TP_QWEATHER_KEY`），不进用户设置、不进备份——Key 是实例机密，
-跟 `auth.secret` 一路，不能跟主题配色一起导出。`provider: open-meteo` 可在配了 Key 时强制
-回落到免 key 上游。缺一项就当没配：半开会让接口全 502，卡片永远 `--`。
+**默认 Open-Meteo，host+key 都配齐才切和风。** 凭据优先从用户设置读（天气组件那一栏），
+没配齐再回落到 `config.yaml` / `TP_QWEATHER_*`。用户设置会进备份——这是刻意的：自托管
+导航站一人一号，Key 跟主题一起带走，换机器不用再填。`provider: open-meteo` 强制走免 key
+上游。缺一项就当没配：半开会让接口全 502，卡片永远 `--`。
 
 - API Host 只收 `*.qweatherapi.com` 和三个旧公共域名。这个值带着 Key 出站，写错成别人的
   域名等于把密钥送出去。随手贴的 `https://` 会剥掉，带路径或端口的直接清空。
@@ -280,4 +281,9 @@ CSS 藏起来的话组件照样挂载、定时器照样跑、接口照样打，�
 - 缓存键带上游前缀。切到和风之后不能把 Open-Meteo 那格的旧数据当新的用。
 
 代价：国内机器连 Open-Meteo 常被墙（`plans.md` 已知限制），配了和风才稳；Key 配错或欠费
-时接口 502，卡片仍静默显示 `--`。浏览器照样不直连任何天气上游。
+时接口 502，卡片仍静默显示 `--`。浏览器照样不直连任何天气上游。Key 进了用户备份，导出
+JSON 时能看到明文——备份文件本来就按账号私有对待，和会话 token 不在同一份里。
+
+左上角药丸**点击展开详情**，不再直接打开设置（设置入口在详情底部，和万年历同一套）。
+悬停展开会在鼠标划过顶栏时误开，点一下才是「我要看」。未配城市的药丸仍跳设置，因为
+那时没有可展开的内容。

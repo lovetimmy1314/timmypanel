@@ -315,7 +315,7 @@ body {
 .tp-float-detail-leave-active {
   transition: opacity 0.2s ease, max-height 0.24s ease, margin-top 0.24s ease;
   overflow: hidden;
-  max-height: 160px;
+  max-height: 200px;
 }
 .tp-float-detail-enter-from,
 .tp-float-detail-leave-to {

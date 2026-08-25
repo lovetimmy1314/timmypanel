@@ -61,8 +61,8 @@ func TestNormalizeQWeatherHost(t *testing.T) {
 		"": "",
 	}
 	for in, want := range cases {
-		if got := normalizeQWeatherHost(in); got != want {
-			t.Errorf("normalizeQWeatherHost(%q) = %q，期望 %q", in, got, want)
+		if got := NormalizeQWeatherHost(in); got != want {
+			t.Errorf("NormalizeQWeatherHost(%q) = %q，期望 %q", in, got, want)
 		}
 	}
 }
@@ -76,7 +76,7 @@ func TestValidQWeatherHost(t *testing.T) {
 		"geoapi.qweather.com",
 	}
 	for _, h := range ok {
-		if !validQWeatherHost(h) {
+		if !ValidQWeatherHost(h) {
 			t.Errorf("%q 应放行", h)
 		}
 	}
@@ -90,7 +90,7 @@ func TestValidQWeatherHost(t *testing.T) {
 		strings.Repeat("a", 254) + ".qweatherapi.com",
 	}
 	for _, h := range bad {
-		if validQWeatherHost(h) {
+		if ValidQWeatherHost(h) {
 			t.Errorf("%q 应拒绝", h)
 		}
 	}

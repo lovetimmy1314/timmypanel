@@ -30,6 +30,7 @@ const data = ref<Weather | null>(null)
 // unset = 还没配城市（此时一个请求都不发），error 只在手里连旧数据都没有时才显示。
 const status = ref<'unset' | 'loading' | 'ok' | 'error'>('loading')
 const expanded = ref(false)
+const root = ref<HTMLElement | null>(null)
 let lastAt = 0
 let timer: number | undefined
 
@@ -114,20 +115,40 @@ function onVisible() {
   if (document.visibilityState === 'visible') tick()
 }
 
+function onKey(e: KeyboardEvent) {
+  if (e.key === 'Escape') expanded.value = false
+}
+
+function onDocClick(e: MouseEvent) {
+  if (expanded.value && root.value && !root.value.contains(e.target as Node)) expanded.value = false
+}
+
 onMounted(() => {
   load()
   timer = window.setInterval(tick, 60_000)
   document.addEventListener('visibilitychange', onVisible)
+  document.addEventListener('keydown', onKey)
+  document.addEventListener('click', onDocClick)
 })
 
 onUnmounted(() => {
   if (timer) window.clearInterval(timer)
   document.removeEventListener('visibilitychange', onVisible)
+  document.removeEventListener('keydown', onKey)
+  document.removeEventListener('click', onDocClick)
 })
 
 // 设置里换了城市/定位方式就立刻重取。lastAt 归零，免得被 tick 的间隔挡住。
 watch(
-  () => [conf.value.locationMode, conf.value.city, conf.value.lat, conf.value.lon].join('|'),
+  () =>
+    [
+      conf.value.locationMode,
+      conf.value.city,
+      conf.value.lat,
+      conf.value.lon,
+      conf.value.provider,
+      conf.value.qweatherHost,
+    ].join('|'),
   () => {
     lastAt = 0
     load()
@@ -158,11 +179,7 @@ const updatedText = computed(() =>
 </script>
 
 <template>
-  <div
-    class="tp-float tp-float-tl"
-    @mouseenter="expanded = true"
-    @mouseleave="expanded = false"
-  >
+  <div ref="root" class="tp-float tp-float-tl">
     <div class="tp-float-card">
       <!-- 还没配城市：给一个入口，不发任何请求，也不弹定位授权 -->
       <button
@@ -176,7 +193,7 @@ const updatedText = computed(() =>
       </button>
 
       <template v-else>
-        <button class="tp-float-pill" type="button" :title="condText" @click="emit('configure')">
+        <button class="tp-float-pill" type="button" :title="condText" @click="expanded = !expanded">
           <WeatherIcon
             v-if="data"
             :code="data.code"
@@ -198,7 +215,6 @@ const updatedText = computed(() =>
           </span>
         </button>
 
-        <!-- 悬停展开详情。高度过渡由 max-height 做，内容行数是固定的 -->
         <Transition name="tp-float-detail">
           <div v-if="expanded" class="tp-float-detail">
             <div v-if="data" class="space-y-1 text-[11px] tp-text-dim">
@@ -210,6 +226,11 @@ const updatedText = computed(() =>
               <div class="tp-text-faint">{{ t('weather.updatedAt', { time: updatedText }) }}</div>
             </div>
             <div v-else class="text-[11px] tp-text-dim">{{ t('weather.unavailable') }}</div>
+            <div class="mt-1.5 flex justify-end">
+              <button class="tp-cal-back" type="button" @click="emit('configure')">
+                {{ t('weather.settings') }}
+              </button>
+            </div>
           </div>
         </Transition>
       </template>
