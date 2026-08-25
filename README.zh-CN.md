@@ -24,7 +24,7 @@ Timmypanel 把你常用的网站收成一张卡片墙。它是私人的：每个
 - 站内搜索，并可加上 Google / Bing / 百度等外部引擎；搜索框可以多开几个，各自默认一个搜索源
 - 一张卡片可同时填公网和内网地址，顶部一键切换
 - 明暗主题，图片 / 纯色 / 渐变壁纸
-- 电脑端左上角悬浮天气（可在设置里关掉，手机上不显示）：选城市或区，或用浏览器定位，天气由服务端代取并缓存，浏览器不直连第三方
+- 电脑端左上角悬浮天气（可在设置里关掉，手机上不显示）：选城市或区，或用浏览器定位，默认走 Open-Meteo（免 key），也可在 `config.yaml` 配和风天气以便精确到区；天气由服务端代取并缓存，浏览器不直连第三方
 - 电脑端右上角悬浮万年历（可在设置里关掉，手机上不显示）：农历、二十四节气、传统节日，展开是整月面板；有当年国务院放假通知数据的年份还会标出放假和补班
 - 中英双语，适配手机，可添加到主屏幕
 - 多账号彼此隔离；支持备份导出 / 导入，服务器每天自动留快照
@@ -187,9 +187,13 @@ fetch:
 backup:
   auto_daily: true
   keep: 7
+weather:                         # 可选；整段不写就是默认的 Open-Meteo
+  # provider: open-meteo         # 即使配了和风 key 也强制走 Open-Meteo
+  qweather_host: xxxxx.xx.qweatherapi.com   # 控制台里的 API Host，不要带 https://
+  qweather_key: ...              # API KEY（不要用 JWT）。改完需重启
 ```
 
-和部署有关的项也能用环境变量覆盖：`TP_LISTEN`、`TP_SECURE`、`TP_DATA_DIR`、`TP_TRUSTED_PROXIES`（逗号分隔）、`TP_SECRET`、`TP_ADMIN_USER`、`TP_ADMIN_PASSWORD`、`TP_ALLOW_PRIVATE_FETCH`。
+和部署有关的项也能用环境变量覆盖：`TP_LISTEN`、`TP_SECURE`、`TP_DATA_DIR`、`TP_TRUSTED_PROXIES`（逗号分隔）、`TP_SECRET`、`TP_ADMIN_USER`、`TP_ADMIN_PASSWORD`、`TP_ALLOW_PRIVATE_FETCH`、`TP_WEATHER_PROVIDER`、`TP_QWEATHER_HOST`、`TP_QWEATHER_KEY`。
 
 其中两个布尔项（`TP_SECURE`、`TP_ALLOW_PRIVATE_FETCH`）**只认** `true` / `false` / `1` / `0`。写成 `yes`、`on` 之类会被忽略并在日志里告警，配置文件里的值原样保留——不会因为拼错就把 `TP_SECURE` 静默关掉。
 

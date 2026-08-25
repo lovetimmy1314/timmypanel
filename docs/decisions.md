@@ -238,10 +238,9 @@ CSS 藏起来的话组件照样挂载、定时器照样跑、接口照样打，�
 
 天气组件要能选到「海淀」而不是只到「北京」。两条路里选了改显示、不换数据源：
 
-**地理编码仍走 Open-Meteo，结果多透 admin2。** 033 已经把上游钉死成这两个域名，
-换 Nominatim 等于再开一条出站、再写一份 User-Agent / 节流，对中国区覆盖更好但
-超出这次要的：「能选区、能显示区名」。Open-Meteo 对中国区县本来就不完整
-（「海淀」有，「天河区」经常没有），这是上游的锅，不在本仓库补一张区划表。
+**地理编码默认仍走 Open-Meteo，结果多透 admin2。** 033 已经把免 key 的上游钉成这两个域名，
+换 Nominatim 等于再开一条出站、再写一份 User-Agent / 节流。Open-Meteo 对中国区县本来
+就不完整（「海淀」有，「天河区」经常没有）。要精确到区，走可选的和风天气，见决策 036。
 
 显示名按 `name · admin2 · admin1` 去重拼接：`广州` 和 `广州市` 算同一层，
 否则卡片上叠两遍。列表右侧 hint 用剩下的层级 + 国家。入库的仍是一个 `city`
@@ -255,3 +254,30 @@ CSS 藏起来的话组件照样挂载、定时器照样跑、接口照样打，�
 
 代价：相邻区的天气读数经常仍是同一份；Open-Meteo 搜不到的区，界面上就是没结果，
 不会回落成所属市再搜一次（那会让「天河」变成「广州」，看起来像精确到了区其实没有）。
+要覆盖这些区，在 `config.yaml` 配和风（决策 036）。
+
+## 036 天气上游默认可选：Open-Meteo 免 key，和风按需
+
+状态：生效。相关：`backend/internal/config/config.go`、`backend/internal/service/weather.go`、
+`backend/internal/service/qweather.go`、`backend/internal/service/fetcher.go`（`GetJSONHeader`）、
+决策 033、决策 035。
+
+天气要精确到中国的区，Open-Meteo 地理编码经常没有（决策 035 已经认了这个锅）。
+和风对中国区县全，但要开发者账号、独立 API Host 和 Key。所以默认不动，做成实例级可选项：
+
+**默认 Open-Meteo，host+key 都配齐才切和风。** 配置在 `config.yaml` 的 `weather` 段
+（或 `TP_QWEATHER_HOST` / `TP_QWEATHER_KEY`），不进用户设置、不进备份——Key 是实例机密，
+跟 `auth.secret` 一路，不能跟主题配色一起导出。`provider: open-meteo` 可在配了 Key 时强制
+回落到免 key 上游。缺一项就当没配：半开会让接口全 502，卡片永远 `--`。
+
+- API Host 只收 `*.qweatherapi.com` 和三个旧公共域名。这个值带着 Key 出站，写错成别人的
+  域名等于把密钥送出去。随手贴的 `https://` 会剥掉，带路径或端口的直接清空。
+- 鉴权用 API Key（`X-QW-Api-Key`），不用 JWT。JWT 要 Ed25519 私钥，对自托管导航站过重，
+  而且私钥更不该出现在 yaml 里。和风仍支持 Key，只是 SDK 5 和 2027 年起会限流。
+- 现象码在服务端收成前端已经认识的 8 档 WMO 粗分类。图标组件不认和风码，未知码回落阴，
+  和 Open-Meteo 未知码同一条路。风速 m/s 转 km/h，湿度 [0,1] 转百分数。
+- 实况和日预报拆成两次请求：日预报失败不影响温度，只是没有今日高低和昼夜。
+- 缓存键带上游前缀。切到和风之后不能把 Open-Meteo 那格的旧数据当新的用。
+
+代价：国内机器连 Open-Meteo 常被墙（`plans.md` 已知限制），配了和风才稳；Key 配错或欠费
+时接口 502，卡片仍静默显示 `--`。浏览器照样不直连任何天气上游。

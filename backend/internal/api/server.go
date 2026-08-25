@@ -34,6 +34,7 @@ type Server struct {
 // NewServer 构造接口层。
 func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 	fetcher := service.NewFetcher(cfg.Fetch.AllowPrivate, time.Duration(cfg.Fetch.TimeoutSec)*time.Second)
+	qwHost, qwKey := qweatherCreds(cfg)
 	return &Server{
 		db:      db,
 		cfg:     cfg,
@@ -43,8 +44,21 @@ func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 		ingestLimiter: middleware.NewLoginLimiter(10, 15*time.Minute, 15*time.Minute),
 		fetcher:       fetcher,
 		// 天气服务共用同一个 fetcher：SSRF 防护、超时和连接复用都在它身上。
-		weather: service.NewWeatherService(fetcher),
+		// host/key 成对才走和风，否则默认 Open-Meteo（决策 036）。
+		weather: service.NewWeatherService(fetcher, qwHost, qwKey),
 	}
+}
+
+func qweatherCreds(cfg *config.Config) (host, key string) {
+	if cfg.UseQWeather() {
+		slog.Info("天气上游已切换为和风天气", "host", cfg.Weather.QWeatherHost)
+		return cfg.Weather.QWeatherHost, cfg.Weather.QWeatherKey
+	}
+	if cfg.Weather.Provider != "open-meteo" &&
+		(cfg.Weather.Provider == "qweather" || cfg.Weather.QWeatherHost != "" || cfg.Weather.QWeatherKey != "") {
+		slog.Warn("和风天气未启用，已回落到 Open-Meteo", "原因", "需要同时配置合法的 qweather_host 和 qweather_key")
+	}
+	return "", ""
 }
 
 // Register 挂载所有路由。

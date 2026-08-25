@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	// 上游是 Open-Meteo：免注册、免 key。地址写死在这里，不接受前端传入 ——
-	// 前端只给坐标，能被访问的域名永远是这两个。
+	// 默认上游是 Open-Meteo：免注册、免 key。地址写死在这里，不接受前端传入 ——
+	// 前端只给坐标。配了和风之后改走 qweather.go 里那一套，域名来自配置白名单。
 	weatherAPIURL = "https://api.open-meteo.com/v1/forecast"
 	geocodeAPIURL = "https://geocoding-api.open-meteo.com/v1/search"
 
@@ -70,6 +70,10 @@ type cacheEntry[T any] struct {
 type WeatherService struct {
 	fetcher *Fetcher
 	now     func() time.Time // 测试里替换掉，才能不睡觉就走到过期分支
+	// qwHost / qwKey 都非空才走和风。构造时由 config.UseQWeather 决定，
+	// 半开（只配了其中一个）在那一层就被挡掉了。
+	qwHost string
+	qwKey  string
 
 	mu      sync.Mutex
 	weather map[string]cacheEntry[Weather]
@@ -78,15 +82,28 @@ type WeatherService struct {
 }
 
 // NewWeatherService 构造天气服务。fetcher 必须是全局那一个：SSRF 防护、超时和
-// 连接复用都挂在它身上。
-func NewWeatherService(f *Fetcher) *WeatherService {
+// 连接复用都挂在它身上。qwHost/qwKey 成对传入才会走和风，否则默认 Open-Meteo。
+func NewWeatherService(f *Fetcher, qwHost, qwKey string) *WeatherService {
 	return &WeatherService{
 		fetcher: f,
 		now:     time.Now,
+		qwHost:  qwHost,
+		qwKey:   qwKey,
 		weather: map[string]cacheEntry[Weather]{},
 		geo:     map[string]cacheEntry[[]GeoPlace]{},
 		quota:   map[uint]*quotaWindow{},
 	}
+}
+
+func (w *WeatherService) useQWeather() bool {
+	return w.qwHost != "" && w.qwKey != ""
+}
+
+func (w *WeatherService) providerPrefix() string {
+	if w.useQWeather() {
+		return "qw"
+	}
+	return "om"
 }
 
 // quantizeCoord 把坐标收到小数点后两位（约 1 公里）。缓存键和真正发给上游的
@@ -107,12 +124,30 @@ func (w *WeatherService) Current(lat, lon float64) (*Weather, error) {
 		return nil, errors.New("坐标不合法")
 	}
 	qlat, qlon := quantizeCoord(lat), quantizeCoord(lon)
-	key := fmt.Sprintf("%.2f,%.2f", qlat, qlon)
+	// 缓存键带上游前缀：切到和风之后不能把 Open-Meteo 那格的旧数据当新的用。
+	key := fmt.Sprintf("%s:%.2f,%.2f", w.providerPrefix(), qlat, qlon)
 
 	if v, hit := w.cachedWeather(key); hit {
 		return &v, nil
 	}
 
+	var (
+		out *Weather
+		err error
+	)
+	if w.useQWeather() {
+		out, err = w.currentQWeather(qlat, qlon)
+	} else {
+		out, err = w.currentOpenMeteo(qlat, qlon)
+	}
+	if err != nil {
+		return nil, err
+	}
+	w.storeWeather(key, *out)
+	return out, nil
+}
+
+func (w *WeatherService) currentOpenMeteo(qlat, qlon float64) (*Weather, error) {
 	q := url.Values{}
 	q.Set("latitude", fmt.Sprintf("%.2f", qlat))
 	q.Set("longitude", fmt.Sprintf("%.2f", qlon))
@@ -126,12 +161,7 @@ func (w *WeatherService) Current(lat, lon float64) (*Weather, error) {
 	if err := w.fetcher.GetJSON(weatherAPIURL+"?"+q.Encode(), weatherBodyLimit, &raw); err != nil {
 		return nil, err
 	}
-	out, err := raw.toWeather(w.now().Unix())
-	if err != nil {
-		return nil, err
-	}
-	w.storeWeather(key, *out)
-	return out, nil
+	return raw.toWeather(w.now().Unix())
 }
 
 // Geocode 按名字搜地点（城市或区）。uid 用来限出站次数，命中缓存的搜索不消耗配额。
@@ -143,7 +173,7 @@ func (w *WeatherService) Geocode(uid uint, query, lang string) ([]GeoPlace, erro
 	if lang != "en" {
 		lang = "zh"
 	}
-	key := lang + "|" + strings.ToLower(query)
+	key := w.providerPrefix() + "|" + lang + "|" + strings.ToLower(query)
 	if v, hit := w.cachedGeo(key); hit {
 		return v, nil
 	}
@@ -151,6 +181,21 @@ func (w *WeatherService) Geocode(uid uint, query, lang string) ([]GeoPlace, erro
 		return nil, errors.New("地点搜索太频繁，请稍后再试")
 	}
 
+	var places []GeoPlace
+	var err error
+	if w.useQWeather() {
+		places, err = w.geocodeQWeather(query, lang)
+	} else {
+		places, err = w.geocodeOpenMeteo(query, lang)
+	}
+	if err != nil {
+		return nil, err
+	}
+	w.storeGeo(key, places)
+	return places, nil
+}
+
+func (w *WeatherService) geocodeOpenMeteo(query, lang string) ([]GeoPlace, error) {
 	q := url.Values{}
 	q.Set("name", query)
 	q.Set("count", "8")
@@ -161,9 +206,7 @@ func (w *WeatherService) Geocode(uid uint, query, lang string) ([]GeoPlace, erro
 	if err := w.fetcher.GetJSON(geocodeAPIURL+"?"+q.Encode(), weatherBodyLimit, &raw); err != nil {
 		return nil, err
 	}
-	places := raw.toPlaces()
-	w.storeGeo(key, places)
-	return places, nil
+	return raw.toPlaces(), nil
 }
 
 // ---- 上游报文 ----

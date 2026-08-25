@@ -140,7 +140,7 @@ func TestValidCoord(t *testing.T) {
 // 缓存的两条要求：TTL 内命中、过期不命中。用可控时钟走，不睡觉。
 func TestWeatherCacheTTL(t *testing.T) {
 	now := time.Unix(1_700_000_000, 0)
-	w := NewWeatherService(nil)
+	w := NewWeatherService(nil, "", "")
 	w.now = func() time.Time { return now }
 
 	w.storeWeather("k", Weather{TempC: 20})
@@ -156,7 +156,7 @@ func TestWeatherCacheTTL(t *testing.T) {
 // 缓存条目数必须有上限，否则拿随机坐标刷接口就是一条内存泄漏。
 func TestWeatherCacheEviction(t *testing.T) {
 	now := time.Unix(1_700_000_000, 0)
-	w := NewWeatherService(nil)
+	w := NewWeatherService(nil, "", "")
 	w.now = func() time.Time { return now }
 
 	for i := 0; i < weatherCacheMax+20; i++ {
@@ -170,7 +170,7 @@ func TestWeatherCacheEviction(t *testing.T) {
 
 func TestGeocodeQuota(t *testing.T) {
 	now := time.Unix(1_700_000_000, 0)
-	w := NewWeatherService(nil)
+	w := NewWeatherService(nil, "", "")
 	w.now = func() time.Time { return now }
 
 	for i := 0; i < geocodeQuotaPerHour; i++ {
@@ -189,5 +189,167 @@ func TestGeocodeQuota(t *testing.T) {
 	now = now.Add(time.Hour + time.Second)
 	if !w.allowGeocode(7) {
 		t.Fatal("新窗口应重新放行")
+	}
+}
+
+func TestQWeatherToWMO(t *testing.T) {
+	cases := map[int]int{
+		100: 0,
+		102: 1,
+		104: 3,
+		309: 51,
+		305: 61,
+		302: 95,
+		400: 71,
+		501: 45,
+		900: 0,
+		999: 3,
+		42:  3,
+	}
+	for in, want := range cases {
+		if got := qweatherToWMO(in); got != want {
+			t.Errorf("qweatherToWMO(%d) = %d，期望 %d", in, got, want)
+		}
+	}
+}
+
+func TestQWeatherCurrentToWeather(t *testing.T) {
+	raw := `{
+	  "condition": {"text": "少云", "code": "102"},
+	  "temperature": {"value": 31.71, "unit": "°C"},
+	  "feelsLike": {"value": 33.64, "unit": "°C"},
+	  "humidity": 0.69,
+	  "wind": {"speed": {"value": 4.74, "unit": "m/s"}}
+	}`
+	var resp qwCurrentResponse
+	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	out, err := resp.toWeather(1000)
+	if err != nil {
+		t.Fatalf("toWeather 失败: %v", err)
+	}
+	if out.TempC != 31.71 || out.FeelsLikeC != 33.64 {
+		t.Fatalf("温度不对: %+v", out)
+	}
+	if out.Code != 1 {
+		t.Fatalf("102 应映射成 WMO 1，得到 %d", out.Code)
+	}
+	if out.Humidity != 69 {
+		t.Fatalf("湿度 0.69 应变成 69%%，得到 %d", out.Humidity)
+	}
+	if math.Abs(out.WindKph-4.74*3.6) > 1e-9 {
+		t.Fatalf("风速应按 m/s×3.6 转 km/h，得到 %v", out.WindKph)
+	}
+	if !out.IsDay {
+		t.Fatal("没有日预报时昼夜默认白天")
+	}
+
+	// 湿度已经是百分数时不要再乘 100。
+	raw = `{"condition":{"code":"100"},"temperature":{"value":20},"humidity":62}`
+	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	out, err = resp.toWeather(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.Humidity != 62 {
+		t.Fatalf("湿度 62 应原样保留，得到 %d", out.Humidity)
+	}
+
+	if _, err := (qwCurrentResponse{}).toWeather(1); err == nil {
+		t.Fatal("缺温度应报错")
+	}
+}
+
+func TestQWeatherDailyApply(t *testing.T) {
+	raw := `{
+	  "days": [{
+	    "temperatureMax": {"value": 29.94},
+	    "temperatureMin": {"value": 20.93},
+	    "astro": {
+	      "sunrise": "2024-08-11T04:22:00Z",
+	      "sunset": "2024-08-11T19:34:00Z"
+	    }
+	  }]
+	}`
+	var daily qwDailyResponse
+	if err := json.Unmarshal([]byte(raw), &daily); err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	out := &Weather{IsDay: true}
+	now := time.Date(2024, 8, 11, 12, 0, 0, 0, time.UTC)
+	daily.apply(out, now)
+	if out.MaxC == nil || *out.MaxC != 29.94 || out.MinC == nil || *out.MinC != 20.93 {
+		t.Fatalf("最高最低不对: %+v", out)
+	}
+	if !out.IsDay {
+		t.Fatal("正午应判为白天")
+	}
+	now = time.Date(2024, 8, 11, 21, 0, 0, 0, time.UTC)
+	daily.apply(out, now)
+	if out.IsDay {
+		t.Fatal("日落后应判为夜间")
+	}
+}
+
+func TestQWeatherGeoToPlaces(t *testing.T) {
+	raw := `{
+	  "code": "200",
+	  "location": [
+	    {"name":"天河","adm1":"广东省","adm2":"广州市","country":"中国","lat":"23.12518","lon":"113.34251"},
+	    {"name":"","lat":"1","lon":"1"},
+	    {"name":"坏坐标","lat":"999","lon":"0"}
+	  ]
+	}`
+	var resp qwGeoResponse
+	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+		t.Fatalf("解析失败: %v", err)
+	}
+	places, err := resp.toPlaces()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(places) != 1 || places[0].Name != "天河" || places[0].Admin2 != "广州市" {
+		t.Fatalf("结果不对: %+v", places)
+	}
+
+	empty := qwGeoResponse{Code: "204"}
+	got, err := empty.toPlaces()
+	if err != nil || got != nil {
+		t.Fatalf("204 应是空列表不是错误: %v %v", got, err)
+	}
+	if _, err := (qwGeoResponse{Code: "401"}).toPlaces(); err == nil {
+		t.Fatal("401 应报错")
+	}
+}
+
+func TestIsDaytime(t *testing.T) {
+	now := time.Date(2024, 8, 11, 12, 0, 0, 0, time.UTC)
+	if day, ok := isDaytime(now, "2024-08-11T04:22:00Z", "2024-08-11T19:34:00Z"); !ok || !day {
+		t.Fatal("正午应是白天")
+	}
+	// 文档示例没有秒。
+	if day, ok := isDaytime(now, "2024-08-11T04:22Z", "2024-08-11T19:34Z"); !ok || !day {
+		t.Fatal("无秒的 RFC3339 也应认")
+	}
+	if day, ok := isDaytime(now, "坏", "2024-08-11T19:34:00Z"); ok || !day {
+		t.Fatal("解析失败应回落 true,false")
+	}
+}
+
+func TestProviderPrefix(t *testing.T) {
+	om := NewWeatherService(nil, "", "")
+	if om.providerPrefix() != "om" || om.useQWeather() {
+		t.Fatal("没配和风应走 Open-Meteo")
+	}
+	qw := NewWeatherService(nil, "h.xy.qweatherapi.com", "k")
+	if qw.providerPrefix() != "qw" || !qw.useQWeather() {
+		t.Fatal("host+key 齐了应走和风")
+	}
+	half := NewWeatherService(nil, "h.xy.qweatherapi.com", "")
+	if half.useQWeather() {
+		t.Fatal("缺 key 不该半开")
 	}
 }

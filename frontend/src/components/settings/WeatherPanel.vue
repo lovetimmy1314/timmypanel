@@ -178,6 +178,7 @@ async function save() {
         <p v-else-if="searched && !searching" class="mt-2 text-xs opacity-45">
           {{ t('weather.noResult') }}
         </p>
+        <p class="mt-2 text-xs opacity-45">{{ t('weather.providerHint') }}</p>
       </SettingsRow>
     </SettingsSection>
 

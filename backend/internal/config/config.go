@@ -65,6 +65,16 @@ type Config struct {
 		Keep int `yaml:"keep"`
 	} `yaml:"backup"`
 
+	// Weather 是天气上游。默认空 = Open-Meteo（免 key）。
+	// host+key 都配了就改走和风（中国区县更全）；provider: open-meteo 可强制不用和风。
+	// omitempty：老配置没有这一块时不要因为零值就重写 yaml、把运维注释抹掉。
+	Weather struct {
+		// open-meteo | qweather。空且没配 host/key 时就是 Open-Meteo。
+		Provider     string `yaml:"provider,omitempty"`
+		QWeatherHost string `yaml:"qweather_host,omitempty"` // 控制台分配的 API Host，不要带 https://
+		QWeatherKey  string `yaml:"qweather_key,omitempty"`  // API KEY，不要用 JWT
+	} `yaml:"weather,omitempty"`
+
 	// 配置文件自身的路径，运行时填充。
 	path string `yaml:"-"`
 }
@@ -160,6 +170,15 @@ func (c *Config) applyEnv() {
 		c.Auth.InitialAdmin.Password = v
 	}
 	c.Fetch.AllowPrivate = envBool("TP_ALLOW_PRIVATE_FETCH", c.Fetch.AllowPrivate)
+	if v := os.Getenv("TP_WEATHER_PROVIDER"); v != "" {
+		c.Weather.Provider = v
+	}
+	if v := os.Getenv("TP_QWEATHER_HOST"); v != "" {
+		c.Weather.QWeatherHost = v
+	}
+	if v := os.Getenv("TP_QWEATHER_KEY"); v != "" {
+		c.Weather.QWeatherKey = v
+	}
 }
 
 // envBool 读一个布尔环境变量：没设就沿用 cur，设了但解析不出来也沿用 cur 并告警。
@@ -202,6 +221,52 @@ func (c *Config) normalize() {
 		c.Backup.Keep = 7
 	}
 	c.Data.Dir = filepath.Clean(c.Data.Dir)
+
+	c.Weather.Provider = strings.ToLower(strings.TrimSpace(c.Weather.Provider))
+	if c.Weather.Provider != "open-meteo" && c.Weather.Provider != "qweather" {
+		c.Weather.Provider = ""
+	}
+	c.Weather.QWeatherHost = normalizeQWeatherHost(c.Weather.QWeatherHost)
+	if !validQWeatherHost(c.Weather.QWeatherHost) {
+		c.Weather.QWeatherHost = ""
+	}
+	c.Weather.QWeatherKey = strings.TrimSpace(c.Weather.QWeatherKey)
+	if r := []rune(c.Weather.QWeatherKey); len(r) > 128 {
+		c.Weather.QWeatherKey = string(r[:128])
+	}
+}
+
+const qweatherHostSuffix = ".qweatherapi.com"
+
+// normalizeQWeatherHost 把用户随手贴的 Host 收成纯主机名：去掉 scheme、路径、空白。
+// 带路径或端口的直接清空——这个值最终会拼进出站 URL，只收主机名才能跟
+// validQWeatherHost 的后缀白名单对上。
+func normalizeQWeatherHost(raw string) string {
+	raw = strings.ToLower(strings.TrimSpace(raw))
+	raw = strings.TrimPrefix(raw, "https://")
+	raw = strings.TrimPrefix(raw, "http://")
+	raw = strings.TrimRight(raw, "/")
+	if raw == "" || strings.ContainsAny(raw, "/:@?#") {
+		return ""
+	}
+	return raw
+}
+
+// validQWeatherHost 只放行和风自己的域名。配置文件是管理员写的，但这个值
+// 会带着 API Key 出站，写错成别人的域名等于把密钥送出去。
+func validQWeatherHost(host string) bool {
+	if host == "" || len(host) > 253 {
+		return false
+	}
+	switch host {
+	case "api.qweather.com", "devapi.qweather.com", "geoapi.qweather.com":
+		return true
+	}
+	if !strings.HasSuffix(host, qweatherHostSuffix) {
+		return false
+	}
+	name := strings.TrimSuffix(host, qweatherHostSuffix)
+	return name != "" && !strings.HasPrefix(name, ".")
 }
 
 // Save 把当前配置写回磁盘（用于首次生成密钥和补齐缺省字段）。
@@ -237,6 +302,18 @@ func (c *Config) EnsureDirs() error {
 		}
 	}
 	return nil
+}
+
+// UseQWeather 判断天气上游是否走和风。host 和 key 都得齐，且没被强制成 open-meteo。
+// 缺一项就回落到 Open-Meteo，不半开：半开会让接口全 502，卡片永远是 --。
+func (c *Config) UseQWeather() bool {
+	if c == nil {
+		return false
+	}
+	if c.Weather.Provider == "open-meteo" {
+		return false
+	}
+	return c.Weather.QWeatherHost != "" && c.Weather.QWeatherKey != ""
 }
 
 // TrimmedProxies 去掉空白项，供 gin.SetTrustedProxies 使用。

@@ -176,6 +176,13 @@ func pickDialIP(ips []net.IP) net.IP {
 //
 // max 是响应体上限，读满就断：上游可以是任何东西，包括一条永不结束的流。
 func (f *Fetcher) GetJSON(rawURL string, max int64, v any) error {
+	return f.GetJSONHeader(rawURL, max, nil, v)
+}
+
+// GetJSONHeader 和 GetJSON 一样，额外带一组请求头。给和风这种要 API Key
+// 的上游用。headers 里的键会盖掉默认的 User-Agent / Accept；传空 map 或 nil
+// 就跟 GetJSON 完全一样。
+func (f *Fetcher) GetJSONHeader(rawURL string, max int64, headers map[string]string, v any) error {
 	target, err := url.Parse(rawURL)
 	if err != nil {
 		return err
@@ -189,6 +196,12 @@ func (f *Fetcher) GetJSON(rawURL string, max int64, v any) error {
 	}
 	req.Header.Set("User-Agent", userAgent)
 	req.Header.Set("Accept", "application/json")
+	for k, val := range headers {
+		if k == "" {
+			continue
+		}
+		req.Header.Set(k, val)
+	}
 	resp, err := f.client.Do(req)
 	if err != nil {
 		return err
