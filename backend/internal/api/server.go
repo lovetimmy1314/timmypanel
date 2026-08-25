@@ -26,13 +26,18 @@ type Server struct {
 	limiter *middleware.LoginLimiter
 	fetcher *service.Fetcher
 	weather *service.WeatherService
+	updater *service.UpdateService
+	version string
 	// ingestLimiter 限的是错误令牌的尝试，不是正常提交。
 	ingestLimiter *middleware.LoginLimiter
 	queues        ingestQueues
 }
 
-// NewServer 构造接口层。
-func NewServer(db *gorm.DB, cfg *config.Config) *Server {
+// NewServer 构造接口层。version 是打进二进制的版本号，空则当 dev。
+func NewServer(db *gorm.DB, cfg *config.Config, version string) *Server {
+	if version == "" {
+		version = "dev"
+	}
 	fetcher := service.NewFetcher(cfg.Fetch.AllowPrivate, time.Duration(cfg.Fetch.TimeoutSec)*time.Second)
 	qwHost, qwKey := qweatherCreds(cfg)
 	return &Server{
@@ -46,6 +51,8 @@ func NewServer(db *gorm.DB, cfg *config.Config) *Server {
 		// 天气服务共用同一个 fetcher：SSRF 防护、超时和连接复用都在它身上。
 		// host/key 成对才走和风，否则默认 Open-Meteo（决策 036）。
 		weather: service.NewWeatherService(fetcher, qwHost, qwKey),
+		updater: service.NewUpdateService(fetcher, version),
+		version: version,
 	}
 }
 
@@ -103,6 +110,10 @@ func (s *Server) Register(r *gin.Engine) {
 
 			// 万年历：纯计算，年月由前端按本地时区算好传上来（决策 034）。
 			authed.GET("/calendar/month", s.handleCalendarMonth)
+
+			// 检测更新：浏览器不直连 GitHub（CSP connect-src 只有 self），
+			// 后端代问并缓存。不在这里做升级——进程换不了自己的镜像（决策 037）。
+			authed.GET("/update/check", s.handleUpdateCheck)
 
 			authed.GET("/settings", s.handleGetSettings)
 			authed.PUT("/settings", s.handlePutSettings)

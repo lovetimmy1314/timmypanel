@@ -125,7 +125,7 @@ func run(configPath string, debug bool) error {
 	}
 	r.MaxMultipartMemory = 16 << 20
 
-	server := api.NewServer(db, cfg)
+	server := api.NewServer(db, cfg, Version)
 	server.Register(r)
 	server.StartAutoBackup()
 	if err := web.Register(r); err != nil {

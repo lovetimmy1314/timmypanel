@@ -62,7 +62,8 @@
   `uploadDiskPath`、`serveUploadRel`、`zipUploadRel`、`remapOwnUploadPath`、
    `(*Setting).Decode`、`safeDial` 的选址判定、`ResetPassword`、
    `newIngestToken`/`ingestQueues`、`SaveIconData`、`NormalizeQWeatherHost`、`ValidQWeatherHost`、
-   `qweatherToWMO`、`(*qwCurrentResponse).toWeather`、`pickAQI`、`(*qwAlertResponse).apply`。这类逻辑出错最隐蔽、改动最频繁。
+    `qweatherToWMO`、`(*qwCurrentResponse).toWeather`、`pickAQI`、`(*qwAlertResponse).apply`、
+    `classifyVersion`/`compareSemver`/`decide`（更新检测）。这类逻辑出错最隐蔽、改动最频繁。
   新写一个这样的函数就顺手补一条用例，别攒着。
 - HTTP 层没有自动化测试，靠手工回归，清单在 `plans.md` 末尾。
 - 造含中文的测试数据**不要**用 `curl -d '{"name":"中文"}'`——Git Bash 会弄坏参数，
@@ -103,6 +104,12 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 
 维护者日常直接提交到 `main`，不开分支（除非在试一个可能推倒重来的方案）。
 外部贡献走分支 + PR，PR 前把上面那两条检查跑过。
+
+**推上 `main` 就会自动打下一个 patch tag**（`v1.0.0` → `v1.0.1`）并开 GitHub Release，
+镜像同时带这个版本号和 `latest`（决策 037）。不要手打 `v*` 来「补一次发版」——
+那个提交已经有 tag 了。要跳 minor / major，在 Actions 里手动跑「构建并推送镜像」，
+bump 选 `minor` 或 `major`。本地 `go run` 仍是 `dev`，`build.ps1` 默认仍是日期号，
+只有 CI 出的产物带 semver。
 
 会被忽略的：`data/`（含配置里的密钥和 sqlite）、根目录 `dist/`（二进制）、
 `node_modules/`、`backend/internal/web/dist/assets/`、

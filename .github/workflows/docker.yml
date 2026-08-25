@@ -1,11 +1,25 @@
 name: 构建并推送镜像
 
-# 推 main 出 latest，推 v* tag 出对应版本号。手动也能跑。
+# 推 main：patch +1 打 v* tag、发 GitHub Release，并推 latest + 版本号镜像。
+# 手推 v* tag 或手动跑：只按那个版本构建（手动跑可选是否再打 tag）。
+# GITHUB_TOKEN 推出去的 tag 不会再触发一次 workflow，所以打 tag 必须放在本文件里，
+# 不能拆成另一个「只打 tag」的 workflow 指望这边跟跑。
 on:
   push:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      bump:
+        description: 打一个新版本 tag（none 只重编镜像）
+        type: choice
+        options: [none, patch, minor, major]
+        default: none
+
+concurrency:
+  group: docker-release
+  # 连推两次必须排队，取消会跳号或只打了 tag 没镜像。
+  cancel-in-progress: false
 
 env:
   REGISTRY: ghcr.io
@@ -15,12 +29,14 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
-      # 推 GHCR 靠自带的 GITHUB_TOKEN，不用另配 secret
+      contents: write
       packages: write
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       # 只有最后那个 alpine 阶段跑在目标架构上（apk add / adduser / chown），
       # 需要模拟。前端和 Go 都在 BUILDPLATFORM 上交叉编译，见 deploy/Dockerfile。
@@ -37,16 +53,76 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # 打进二进制的版本号（-version 会打印它）。tag 构建取 tag 名去掉 v，
-      # 日常 main 构建取「日期-短 sha」，日期部分和 build.ps1 的默认值同形。
+      # 打进二进制的版本号（-version 会打印它）。推 main 取下一个 patch；
+      # 已有 v* tag 就用它；其余（手动重编）用「日期-短 sha」。
       - name: 定版本号
         id: ver
+        env:
+          BUMP: ${{ github.event.inputs.bump || 'patch' }}
         run: |
+          set -euo pipefail
+          git fetch --tags --force
+
+          create_tag=false
+          new_tag=""
+          value=""
+
+          next_tag() {
+            local bump="$1"
+            local latest ver major rest minor patch
+            latest="$(git tag -l 'v*.*.*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 || true)"
+            if [ -z "$latest" ]; then
+              echo v1.0.0
+              return
+            fi
+            ver="${latest#v}"
+            major="${ver%%.*}"
+            rest="${ver#*.}"
+            minor="${rest%%.*}"
+            patch="${rest#*.}"
+            case "$bump" in
+              major) echo "v$((major + 1)).0.0" ;;
+              minor) echo "v${major}.$((minor + 1)).0" ;;
+              *)     echo "v${major}.${minor}.$((patch + 1))" ;;
+            esac
+          }
+
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            echo "value=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
+            value="${GITHUB_REF#refs/tags/v}"
+          elif git describe --exact-match --tags HEAD >/dev/null 2>&1; then
+            value="$(git describe --exact-match --tags HEAD)"
+            value="${value#v}"
+          elif [[ "${GITHUB_EVENT_NAME}" == push && "${GITHUB_REF}" == refs/heads/main ]]; then
+            new_tag="$(next_tag patch)"
+            value="${new_tag#v}"
+            create_tag=true
+          elif [[ "${GITHUB_EVENT_NAME}" == workflow_dispatch && "${BUMP}" != none ]]; then
+            if [[ "${GITHUB_REF}" != refs/heads/main ]]; then
+              echo "只在 main 上打版本 tag" >&2
+              exit 1
+            fi
+            new_tag="$(next_tag "$BUMP")"
+            value="${new_tag#v}"
+            create_tag=true
           else
-            echo "value=$(date +%Y.%m.%d)-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+            value="$(date +%Y.%m.%d)-${GITHUB_SHA::7}"
           fi
+
+          {
+            echo "value=${value}"
+            echo "create_tag=${create_tag}"
+            echo "new_tag=${new_tag}"
+          } >> "$GITHUB_OUTPUT"
+
+          if [[ "${value}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "semver=true" >> "$GITHUB_OUTPUT"
+            echo "major_minor=${value%.*}" >> "$GITHUB_OUTPUT"
+          else
+            echo "semver=false" >> "$GITHUB_OUTPUT"
+            echo "major_minor=" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "VERSION=${value} create_tag=${create_tag} new_tag=${new_tag}"
 
       - name: 算镜像 tag
         id: meta
@@ -54,9 +130,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=${{ steps.ver.outputs.value }}
+            type=raw,value=${{ steps.ver.outputs.major_minor }},enable=${{ steps.ver.outputs.semver == 'true' }}
+            type=raw,value=latest,enable=${{ steps.ver.outputs.semver == 'true' }}
 
       - name: 构建并推送
         uses: docker/build-push-action@v6
@@ -71,3 +147,28 @@ jobs:
             VERSION=${{ steps.ver.outputs.value }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # 镜像推成功再发 Release：gh 会按 --target 打 annotated tag。
+      # 构建失败不占版本号。GITHUB_TOKEN 推的 tag 不会再触发本 workflow。
+      - name: 打 tag 并发 GitHub Release
+        if: steps.ver.outputs.create_tag == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_TAG: ${{ steps.ver.outputs.new_tag }}
+        run: |
+          set -euo pipefail
+          gh release create "$NEW_TAG" --generate-notes --title "$NEW_TAG" --target "$GITHUB_SHA"
+          echo "已发布 $NEW_TAG"
+
+      - name: 手推的 tag 补发 Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "$tag 的 Release 已存在"
+          else
+            gh release create "$tag" --generate-notes --title "$tag"
+          fi

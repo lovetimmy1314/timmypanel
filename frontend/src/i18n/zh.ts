@@ -216,7 +216,7 @@ export const zh = {
   'settings.nav.site': '全局设置',
   'settings.nav.siteDesc': '站点标题、图标和登录页背景',
   'settings.nav.about': '关于',
-  'settings.nav.aboutDesc': '开发者与仓库地址',
+  'settings.nav.aboutDesc': '版本、更新与仓库地址',
 
   // 个性化
   'appearance.logo': 'LOGO',
@@ -403,6 +403,21 @@ export const zh = {
   'about.repo': '仓库地址：',
   'about.license': '许可证：',
   'about.offline': '图标集已打包进程序，断网也能正常显示。',
+  'about.versionTitle': '版本',
+  'about.currentVersion': '当前版本：',
+  'about.check': '检测更新',
+  'about.checkFailed': '检测更新失败',
+  'about.releaseNotes': '发行说明',
+  'about.statusUpToDate': '已是最新（{current}）',
+  'about.statusUpdate': '有新版本：{latest}（当前 {current}）',
+  'about.statusDev': '这是开发构建，不判断是否落后。',
+  'about.statusUnavailable': '暂时连不上 GitHub，请稍后再试。',
+  'about.upgradeTitle': '升级',
+  'about.upgradeHint': '程序自己换不了镜像。把下面命令粘到宿主机执行即可（数据在 Docker 卷里，升级不会丢）。',
+  'about.binaryHint': '当前不像是容器。二进制部署请按文档替换文件后重启服务。',
+  'about.copyCommand': '复制命令',
+  'about.copied': '已复制到剪贴板',
+  'about.copyFailed': '复制失败，请手动选择复制',
 
   // 天气组件（首页左上角悬浮，只在桌面端出现）
   'weather.setCity': '选择城市',

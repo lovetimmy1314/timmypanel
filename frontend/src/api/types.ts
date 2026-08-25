@@ -160,6 +160,22 @@ export interface SiteConfig {
 // GET /auth/config 的返回：未登录也能读，图片已换成公开只读地址。
 export interface PublicSiteConfig extends SiteConfig {
   allowRegister: boolean
+  version: string
+}
+
+export type UpdateStatus = 'upToDate' | 'updateAvailable' | 'dev' | 'upstreamUnavailable'
+export type UpdateChannel = 'dev' | 'rolling' | 'release'
+
+// GET /update/check 的返回。文案走 i18n，这里只有状态码。
+export interface UpdateCheck {
+  current: string
+  latest: string
+  hasUpdate: boolean
+  channel: UpdateChannel
+  status: UpdateStatus
+  releaseUrl?: string
+  checkedAt: number
+  inDocker: boolean
 }
 
 export interface UploadItem {

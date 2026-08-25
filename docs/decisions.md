@@ -292,3 +292,39 @@ JSON 时能看到明文——备份文件本来就按账号私有对待，和会
 悬停展开会在鼠标划过顶栏时误开，点一下才是「我要看」。未配城市的药丸仍跳设置，因为
 那时没有可展开的内容。详情展开用从左上角缩放淡入（和万年历对称），不用 max-height
 拉开——和风字段一多，max-height 会卡在半截。
+
+## 037 关于页只检测更新并复制命令，进程自己不升级
+
+状态：生效。相关：`backend/internal/service/update.go`、`backend/internal/api/update.go`、
+`frontend/src/components/settings/AboutPanel.vue`、`.github/workflows/docker.yml`、
+`deploy/update.sh`、决策 030。
+
+「关于」要显示版本、能检测更新，管理员还想「一键升级」。进程自己换镜像做不到，也不该做：
+
+- Docker 里没有 docker.sock，挂进去等于把宿主机 root 交给这个公网登录应用。
+- systemd 单元 `ProtectSystem=strict`，可写路径只有数据目录，二进制换不掉。
+
+所以应用内只做三件事：把 `main.Version` 挂到 `GET /auth/config`；登录用户点「检测更新」
+走 `GET /update/check`；管理员看到有新版本时**复制** README 里那三条 `update.sh` 命令。
+命令写死在前端，不从 GitHub 响应里拼——防投毒。真正的升级仍是决策 030 的宿主机脚本。
+
+检测必须走后端 `Fetcher`：CSP 的 `connect-src` 只有 `'self'`，浏览器直连 GitHub 会被自己挡掉。
+仓库地址写死，不接受用户 URL。GitHub 未认证限额 60 次/小时/IP，成功结果缓存 1 小时，
+失败缓存 5 分钟，并发用单飞；打开关于页不出站，要点按钮。
+
+版本通道跟构建方式对齐：`dev` 不判断新旧；`YYYY.MM.DD-<sha7>`（CI 推 main 的旧形态，
+以及本地 `build.ps1` 的日期号）跟 `main` HEAD 短 SHA 比；`1.2.3` 只跟最新正式 Release
+做 semver，main 上的新提交不打扰钉死版本的人。
+
+**每次推 `main` 自动 patch +1 打 `v*` tag，并开一个 GitHub Release。** 镜像打进二进制的
+版本号因此是 `1.2.3` 而不是日期-sha。打 tag 必须和推镜像放在**同一个** workflow 里：
+`GITHUB_TOKEN` 推出去的 tag **不会**再触发一次 workflow，拆成「只打 tag」的文件这边跟跑
+不到。镜像推成功才打 tag，构建失败不占版本号。跳 minor/major 用手动触发。
+
+代价：
+
+- 管理员仍要 SSH 到宿主机跑那条命令，浏览器里没有真正的一键应用。
+- 国内机器连不上 GitHub 时检测失败（和天气同一条 Fetcher，不走代理）。
+- 每个合进 main 的提交都是一个 Release，历史会比较碎；按 commit 信息自动生成 notes，
+  大改仍建议手写。
+- 钉 `TP_TAG=1.2.3` 的实例不会跟着 `latest` 走，要自己改 tag 或改回 `latest`。

@@ -29,6 +29,7 @@ It ships as **one executable plus one data directory**. The web UI is compiled i
 - Chinese and English UI; works on phones; can be added to the home screen
 - Isolated accounts; JSON / ZIP backup and restore; daily snapshots on the server
 - No third-party requests from the browser — icon sets are bundled, not fetched from a CDN. With the weather widget on, the outbound call happens on the server
+- About page shows the running version and can check for updates; an admin can copy the host-side upgrade commands (the process cannot replace its own image)
 
 ## Deploy
 
@@ -71,6 +72,8 @@ curl -fsSLO https://raw.githubusercontent.com/lovetimmy1314/timmypanel/main/depl
 chmod +x update.sh
 ./update.sh
 ```
+
+Settings → About shows the running version and can check for updates. On Docker, an admin can copy the three commands above and run them on the host. The process cannot replace its own image.
 
 **Common tweaks**
 
@@ -232,7 +235,7 @@ cd frontend && npm ci && npm run build     # writes into backend/internal/web/di
 cd ../backend && go build -o timmypanel .  # embeds it
 ```
 
-Docker images are normally built by GitHub Actions. To build one locally:
+Docker images are normally built by GitHub Actions: every push to `main` cuts the next patch tag (`v1.0.0` → `v1.0.1`), opens a GitHub Release, and publishes that version plus `latest`. To build one locally:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build

@@ -106,6 +106,7 @@ func (s *Server) handleAuthConfig(c *gin.Context) {
 		"siteTitle":       cfg.SiteTitle,
 		"siteIcon":        icon,
 		"loginBackground": loginBg,
+		"version":         s.version,
 	})
 }
 

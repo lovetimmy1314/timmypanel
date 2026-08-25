@@ -29,6 +29,7 @@ Timmypanel 把你常用的网站收成一张卡片墙。它是私人的：每个
 - 中英双语，适配手机，可添加到主屏幕
 - 多账号彼此隔离；支持备份导出 / 导入，服务器每天自动留快照
 - 浏览器运行时不访问任何第三方，图标都打在程序里；开了天气组件之后，出站请求只发生在服务端
+- 关于页显示版本、检测更新；管理员可复制宿主机升级命令（程序自己换不了镜像）
 
 ## 部署
 
@@ -71,6 +72,8 @@ curl -fsSLO https://raw.githubusercontent.com/lovetimmy1314/timmypanel/main/depl
 chmod +x update.sh
 ./update.sh
 ```
+
+设置 → 关于 里能看到当前版本、检测是否有新版。管理员在 Docker 部署下可以把上面这三条命令一键复制出来，到宿主机执行。程序自己换不了镜像。
 
 **常见调整**
 
@@ -234,7 +237,7 @@ cd frontend && npm ci && npm run build     # 产物写进 backend/internal/web/d
 cd ../backend && go build -o timmypanel .  # 把它打进二进制
 ```
 
-Docker 镜像一般由 GitHub Actions 自动构建。要在本地自己打镜像：
+Docker 镜像一般由 GitHub Actions 自动构建：每次推到 `main` 会打下一个 patch 版本（`v1.0.0` → `v1.0.1`）并发 GitHub Release，镜像同时标这个版本号和 `latest`。要在本地自己打镜像：
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build

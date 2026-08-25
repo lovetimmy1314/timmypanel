@@ -11,6 +11,7 @@ const DEFAULTS: PublicSiteConfig = {
   siteTitle: 'Timmypanel',
   siteIcon: '',
   loginBackground: '',
+  version: 'dev',
 }
 
 // 品牌图标，和 frontend/index.html 里那份 <link rel="icon"> 必须是同一张图（改一处要改两处）。

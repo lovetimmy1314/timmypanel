@@ -219,7 +219,7 @@ export const en: Record<MessageKey, string> = {
   'settings.nav.site': 'Instance',
   'settings.nav.siteDesc': 'Site title, icon and login background',
   'settings.nav.about': 'About',
-  'settings.nav.aboutDesc': 'Author and repository',
+  'settings.nav.aboutDesc': 'Version, updates and repository',
 
   // appearance
   'appearance.logo': 'Logo',
@@ -414,6 +414,23 @@ export const en: Record<MessageKey, string> = {
   'about.repo': 'Repository: ',
   'about.license': 'License: ',
   'about.offline': 'The icon set ships inside the binary, so icons render offline too.',
+  'about.versionTitle': 'Version',
+  'about.currentVersion': 'Current version: ',
+  'about.check': 'Check for updates',
+  'about.checkFailed': 'Could not check for updates',
+  'about.releaseNotes': 'Release notes',
+  'about.statusUpToDate': 'You are up to date ({current})',
+  'about.statusUpdate': 'Update available: {latest} (now {current})',
+  'about.statusDev': 'This is a development build; it is not compared against releases.',
+  'about.statusUnavailable': 'GitHub is unreachable right now. Try again later.',
+  'about.upgradeTitle': 'Upgrade',
+  'about.upgradeHint':
+    'The process cannot replace its own image. Paste the commands below on the host (data lives in the Docker volume and is kept).',
+  'about.binaryHint':
+    'This instance does not look like a container. For a bare binary, replace the file and restart the service as in the README.',
+  'about.copyCommand': 'Copy command',
+  'about.copied': 'Copied to the clipboard',
+  'about.copyFailed': 'Copy failed, please select and copy manually',
 
   // ---- weather widget (top-left float, desktop only) ----
   'weather.setCity': 'Pick a city',
