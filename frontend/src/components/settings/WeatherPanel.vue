@@ -32,7 +32,7 @@ const currentCity = computed(() => {
   return t('weather.notSet')
 })
 
-// 城市搜索走后端代理（前端直连上游会被 CSP 挡掉，决策 033）。
+// 地点搜索走后端代理（前端直连上游会被 CSP 挡掉，决策 033）。
 async function search() {
   const q = keyword.value.trim()
   if (!q) return
@@ -50,9 +50,39 @@ async function search() {
   }
 }
 
-// 选中一条结果：城市名带上省份，同名城市（好几个 Springfield）才分得清。
+// 「广州」和「广州市」算同一层，叠上去卡片上是废话。只剥行政区后缀，
+// 不用 startsWith：否则 Springfield 会把 Spring 吃掉。
+function foldPlace(s: string): string {
+  return s.replace(/(特别行政区|自治区|自治州|地区|市|区|县|省|州|盟|旗)$/u, '')
+}
+
+function samePlace(a: string, b: string): boolean {
+  return a === b || foldPlace(a) === foldPlace(b)
+}
+
+function uniqueParts(values: string[], skip: string[] = []): string[] {
+  const out: string[] = []
+  const seen = [...skip]
+  for (const v of values) {
+    const s = (v ?? '').trim()
+    if (!s || seen.some((x) => samePlace(x, s))) continue
+    seen.push(s)
+    out.push(s)
+  }
+  return out
+}
+
+// 选中一条结果：显示名尽量精确到区。admin2 是市/区，admin1 是省/州。
+function placeLabel(p: GeoPlace): string {
+  return uniqueParts([p.name, p.admin2, p.admin1]).join('·') || p.name
+}
+
+function placeHint(p: GeoPlace): string {
+  return uniqueParts([p.admin2, p.admin1, p.country], [p.name]).join(' · ')
+}
+
 function pick(p: GeoPlace) {
-  draft.value.weather.city = p.admin1 && p.admin1 !== p.name ? `${p.name}·${p.admin1}` : p.name
+  draft.value.weather.city = placeLabel(p)
   draft.value.weather.lat = p.lat
   draft.value.weather.lon = p.lon
   results.value = []
@@ -141,7 +171,7 @@ async function save() {
             <Icon icon="mdi:map-marker-outline" class="text-base opacity-60 shrink-0" />
             <span class="truncate">{{ p.name }}</span>
             <span class="ml-auto shrink-0 text-xs opacity-50">
-              {{ [p.admin1, p.country].filter(Boolean).join(' · ') }}
+              {{ placeHint(p) }}
             </span>
           </button>
         </div>

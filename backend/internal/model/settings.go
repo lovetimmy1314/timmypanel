@@ -60,7 +60,7 @@ type SearchConf struct {
 }
 
 // WeatherConf 是首页左上角那个悬浮天气组件的配置。坐标是给后端代理上游用的，
-// 城市名只用来显示——两者都由用户在设置里搜城市选定，或由浏览器定位写入。
+// 地点名只用来显示——两者都由用户在设置里搜地点选定，或由浏览器定位写入。
 type WeatherConf struct {
 	Enabled bool `json:"enabled"`
 	// LocationMode 为 auto 时坐标由浏览器定位给出（只存在 localStorage，不入库），

@@ -15,7 +15,7 @@ import (
 	"timmypanel/internal/service"
 )
 
-// maxGeocodeQueryRunes 是城市搜索关键词的长度上限。地名再长也到不了这个数，
+// maxGeocodeQueryRunes 是地点搜索关键词的长度上限。地名再长也到不了这个数，
 // 这里是防「拿一个超长串去构造上游 URL」的。
 const maxGeocodeQueryRunes = 32
 
@@ -45,21 +45,21 @@ func (s *Server) handleWeather(c *gin.Context) {
 	ok(c, data)
 }
 
-// handleWeatherGeocode 按名字搜城市，给设置里的城市选择器用。
+// handleWeatherGeocode 按名字搜地点（城市或区），给设置里的选择器用。
 func (s *Server) handleWeatherGeocode(c *gin.Context) {
 	q := strings.TrimSpace(c.Query("q"))
 	if q == "" {
-		badRequest(c, "请输入城市名")
+		badRequest(c, "请输入地点名")
 		return
 	}
 	if len([]rune(q)) > maxGeocodeQueryRunes {
-		badRequest(c, "城市名过长")
+		badRequest(c, "地点名过长")
 		return
 	}
 	items, err := s.weather.Geocode(middleware.UserID(c), q, c.Query("lang"))
 	if err != nil {
-		slog.Warn("城市搜索失败", "err", err)
-		fail(c, http.StatusBadGateway, "城市搜索暂时不可用")
+		slog.Warn("地点搜索失败", "err", err)
+		fail(c, http.StatusBadGateway, "地点搜索暂时不可用")
 		return
 	}
 	ok(c, gin.H{"items": items})

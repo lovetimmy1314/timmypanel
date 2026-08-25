@@ -93,7 +93,8 @@ func TestWeatherResponseIncomplete(t *testing.T) {
 
 func TestGeocodeResponseToPlaces(t *testing.T) {
 	raw := `{"results":[
-	  {"name":"北京","admin1":"北京市","country":"中国","latitude":39.9075,"longitude":116.39723},
+	  {"name":"海淀","admin1":"北京市","admin2":"北京市","country":"中国","latitude":39.99064,"longitude":116.28868},
+	  {"name":"Berlin","admin1":"Berlin","country":"Deutschland","latitude":52.52,"longitude":13.41},
 	  {"name":"","latitude":1,"longitude":1},
 	  {"name":"坏坐标","latitude":999,"longitude":0}
 	]}`
@@ -102,20 +103,23 @@ func TestGeocodeResponseToPlaces(t *testing.T) {
 		t.Fatalf("解析失败: %v", err)
 	}
 	places := resp.toPlaces()
-	if len(places) != 1 {
+	if len(places) != 2 {
 		t.Fatalf("空名字和越界坐标都该被丢掉，得到 %d 条: %+v", len(places), places)
 	}
-	if places[0].Name != "北京" || places[0].Admin1 != "北京市" {
-		t.Fatalf("结果不对: %+v", places[0])
+	if places[0].Name != "海淀" || places[0].Admin1 != "北京市" || places[0].Admin2 != "北京市" {
+		t.Fatalf("带 admin2 的结果不对: %+v", places[0])
+	}
+	if places[1].Name != "Berlin" || places[1].Admin2 != "" {
+		t.Fatalf("缺 admin2 时应为空串: %+v", places[1])
 	}
 }
 
 func TestQuantizeCoord(t *testing.T) {
 	cases := map[float64]float64{
-		39.9075:  39.9,
-		116.3972: 116.4,
-		-0.04:    0,
-		-33.86:   -33.9,
+		39.9075:  39.91,
+		116.3972: 116.40,
+		-0.044:   -0.04,
+		-33.86:   -33.86,
 	}
 	for in, want := range cases {
 		if got := quantizeCoord(in); math.Abs(got-want) > 1e-9 {

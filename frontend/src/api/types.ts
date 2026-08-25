@@ -129,6 +129,7 @@ export interface CalendarMonth {
 export interface GeoPlace {
   name: string
   admin1: string
+  admin2: string
   country: string
   lat: number
   lon: number

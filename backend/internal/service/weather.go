@@ -27,8 +27,8 @@ const (
 	weatherCacheMax = 256
 	geocodeCacheMax = 256
 
-	// 每个用户每小时最多让多少次城市搜索真的出站。命中缓存的不算。
-	// 城市搜索的关键词是用户随手敲的，不设限等于给了一个「登录后可用的
+	// 每个用户每小时最多让多少次地点搜索真的出站。命中缓存的不算。
+	// 地点搜索的关键词是用户随手敲的，不设限等于给了一个「登录后可用的
 	// 出站请求放大器」——限流器只拦出站，界面上的重复搜索照样秒回。
 	geocodeQuotaPerHour = 60
 )
@@ -47,10 +47,11 @@ type Weather struct {
 	UpdatedAt  int64    `json:"updatedAt"` // 这份数据是什么时候抓的，unix 秒
 }
 
-// GeoPlace 是城市搜索的一条结果。
+// GeoPlace 是地点搜索的一条结果。
 type GeoPlace struct {
 	Name    string  `json:"name"`
-	Admin1  string  `json:"admin1"` // 省/州，用来区分同名城市
+	Admin1  string  `json:"admin1"` // 省/州
+	Admin2  string  `json:"admin2"` // 市/区。中国的区往往在 name 里，admin2 是所属市
 	Country string  `json:"country"`
 	Lat     float64 `json:"lat"`
 	Lon     float64 `json:"lon"`
@@ -88,11 +89,11 @@ func NewWeatherService(f *Fetcher) *WeatherService {
 	}
 }
 
-// quantizeCoord 把坐标收到小数点后一位（约 11 公里）。缓存键和真正发给上游的
-// 坐标都用这个值：同一个小区里的两个人共用一份缓存，顺带也少给上游一点精度。
-// 天气本来就没有 11 公里以内的分辨率，这里不损失任何东西。
+// quantizeCoord 把坐标收到小数点后两位（约 1 公里）。缓存键和真正发给上游的
+// 坐标都用这个值，和入库的 roundCoord 对齐——否则库里 39.91、出站却变成 39.9，
+// 海淀和朝阳会被并成同一格。上游国内格点仍约 9–15km，再细没有新信息。
 func quantizeCoord(v float64) float64 {
-	return math.Round(v*10) / 10
+	return math.Round(v*100) / 100
 }
 
 // ValidCoord 判断坐标是否落在合法区间。NaN 比较永远为假，所以 NaN 会被这里挡掉。
@@ -106,15 +107,15 @@ func (w *WeatherService) Current(lat, lon float64) (*Weather, error) {
 		return nil, errors.New("坐标不合法")
 	}
 	qlat, qlon := quantizeCoord(lat), quantizeCoord(lon)
-	key := fmt.Sprintf("%.1f,%.1f", qlat, qlon)
+	key := fmt.Sprintf("%.2f,%.2f", qlat, qlon)
 
 	if v, hit := w.cachedWeather(key); hit {
 		return &v, nil
 	}
 
 	q := url.Values{}
-	q.Set("latitude", fmt.Sprintf("%.1f", qlat))
-	q.Set("longitude", fmt.Sprintf("%.1f", qlon))
+	q.Set("latitude", fmt.Sprintf("%.2f", qlat))
+	q.Set("longitude", fmt.Sprintf("%.2f", qlon))
 	q.Set("current", "temperature_2m,relative_humidity_2m,apparent_temperature,is_day,weather_code,wind_speed_10m")
 	q.Set("daily", "temperature_2m_max,temperature_2m_min")
 	// timezone=auto 让上游按目标坐标所在时区切「今天」，daily 那两个值才是当地的今天。
@@ -133,11 +134,11 @@ func (w *WeatherService) Current(lat, lon float64) (*Weather, error) {
 	return out, nil
 }
 
-// Geocode 按名字搜城市。uid 用来限出站次数，命中缓存的搜索不消耗配额。
+// Geocode 按名字搜地点（城市或区）。uid 用来限出站次数，命中缓存的搜索不消耗配额。
 func (w *WeatherService) Geocode(uid uint, query, lang string) ([]GeoPlace, error) {
 	query = strings.TrimSpace(query)
 	if query == "" {
-		return nil, errors.New("请输入城市名")
+		return nil, errors.New("请输入地点名")
 	}
 	if lang != "en" {
 		lang = "zh"
@@ -147,7 +148,7 @@ func (w *WeatherService) Geocode(uid uint, query, lang string) ([]GeoPlace, erro
 		return v, nil
 	}
 	if !w.allowGeocode(uid) {
-		return nil, errors.New("城市搜索太频繁，请稍后再试")
+		return nil, errors.New("地点搜索太频繁，请稍后再试")
 	}
 
 	q := url.Values{}
@@ -220,6 +221,7 @@ type geocodeResponse struct {
 	Results []struct {
 		Name      string  `json:"name"`
 		Admin1    string  `json:"admin1"`
+		Admin2    string  `json:"admin2"`
 		Country   string  `json:"country"`
 		Latitude  float64 `json:"latitude"`
 		Longitude float64 `json:"longitude"`
@@ -235,6 +237,7 @@ func (r geocodeResponse) toPlaces() []GeoPlace {
 		out = append(out, GeoPlace{
 			Name:    it.Name,
 			Admin1:  it.Admin1,
+			Admin2:  it.Admin2,
 			Country: it.Country,
 			Lat:     it.Latitude,
 			Lon:     it.Longitude,
@@ -311,7 +314,7 @@ type quotaWindow struct {
 	n     int
 }
 
-// allowGeocode 判断这次城市搜索能不能出站，并计数。
+// allowGeocode 判断这次地点搜索能不能出站，并计数。
 func (w *WeatherService) allowGeocode(uid uint) bool {
 	w.mu.Lock()
 	defer w.mu.Unlock()
