@@ -34,7 +34,7 @@ func (s *Server) handleWeather(c *gin.Context) {
 		badRequest(c, "坐标不合法")
 		return
 	}
-	data, err := s.weather.Current(lat, lon, s.weatherCreds(c))
+	data, err := s.weather.Current(lat, lon, s.weatherCreds(c), c.Query("lang"))
 	if err != nil {
 		// 上游不通是常态（网络、限流、被墙），不值得记成 error，也别把上游的
 		// 原始错误吐给前端 —— 里面带着我们拼的完整 URL。

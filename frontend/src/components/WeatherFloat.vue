@@ -7,8 +7,8 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { Icon } from '@iconify/vue'
 import { api } from '@/api/http'
 import { usePanelStore } from '@/stores/panel'
-import { dateLocale, t } from '@/i18n'
-import { formatTemp, weatherLabelKey } from '@/utils/weather'
+import { dateLocale, locale, t } from '@/i18n'
+import { formatTemp, weatherLabelKey, windDirKey } from '@/utils/weather'
 import WeatherIcon from './WeatherIcon.vue'
 import type { Weather } from '@/api/types'
 
@@ -95,7 +95,11 @@ async function load() {
   }
   if (!data.value) status.value = 'loading'
   try {
-    const q = new URLSearchParams({ lat: String(coords.lat), lon: String(coords.lon) })
+    const q = new URLSearchParams({
+      lat: String(coords.lat),
+      lon: String(coords.lon),
+      lang: locale.value,
+    })
     data.value = await api.get<Weather>(`/weather?${q}`)
     status.value = 'ok'
     lastAt = Date.now()
@@ -148,6 +152,7 @@ watch(
       conf.value.lon,
       conf.value.provider,
       conf.value.qweatherHost,
+      locale.value,
     ].join('|'),
   () => {
     lastAt = 0
@@ -162,7 +167,49 @@ const cityText = computed(() => {
   if (conf.value.city) return conf.value.city
   return conf.value.locationMode === 'auto' ? t('weather.myLocation') : ''
 })
-const condText = computed(() => (data.value ? t(weatherLabelKey(data.value.code)) : ''))
+const condText = computed(() => {
+  const d = data.value
+  if (!d) return ''
+  return d.conditionText || t(weatherLabelKey(d.code))
+})
+const windText = computed(() => {
+  const d = data.value
+  if (!d) return ''
+  const speed = `${Math.round(d.windKph)} km/h`
+  const key = d.windDir ? windDirKey(d.windDir) : ''
+  return key ? `${t(key)} ${speed}` : `${t('weather.wind')} ${speed}`
+})
+const visText = computed(() => {
+  const v = data.value?.visibilityKm
+  if (v == null) return ''
+  return v >= 10 ? `${Math.round(v)} km` : `${v.toFixed(1)} km`
+})
+const precipText = computed(() => {
+  const v = data.value?.precipMm
+  if (v == null) return ''
+  return `${v.toFixed(1)} mm`
+})
+const aqiText = computed(() => {
+  const d = data.value
+  if (d?.aqi == null) return ''
+  return d.aqiCategory ? `${d.aqi} ${d.aqiCategory}` : String(d.aqi)
+})
+const rich = computed(() => {
+  const d = data.value
+  if (!d) return false
+  return !!(
+    d.conditionText ||
+    d.windDir ||
+    d.uvIndex != null ||
+    d.visibilityKm != null ||
+    d.pressureHpa != null ||
+    d.precipMm != null ||
+    d.sunrise ||
+    d.sunset ||
+    d.aqi != null ||
+    d.alert
+  )
+})
 const rangeText = computed(() => {
   const d = data.value
   if (!d || d.maxC === null || d.minC === null) return '--'
@@ -215,15 +262,25 @@ const updatedText = computed(() =>
           </span>
         </button>
 
-        <Transition name="tp-float-detail">
-          <div v-if="expanded" class="tp-float-detail">
-            <div v-if="data" class="space-y-1 text-[11px] tp-text-dim">
-              <div class="tp-text-soft text-[12px]">{{ condText }}</div>
+        <Transition name="tp-wx-pop">
+          <div v-if="expanded" class="tp-wx-panel" :class="rich ? 'tp-wx-panel-wide' : ''">
+            <div v-if="data" class="tp-wx-grid">
+              <div class="tp-wx-cond">{{ condText }}</div>
               <div>{{ t('weather.feelsLike') }} {{ formatTemp(data.feelsLikeC, conf.unit) }}</div>
               <div>{{ t('weather.range') }} {{ rangeText }}</div>
+              <div class="tp-wx-span">{{ windText }}</div>
               <div>{{ t('weather.humidity') }} {{ data.humidity }}%</div>
-              <div>{{ t('weather.wind') }} {{ Math.round(data.windKph) }} km/h</div>
-              <div class="tp-text-faint">{{ t('weather.updatedAt', { time: updatedText }) }}</div>
+              <div v-if="data.pressureHpa != null">
+                {{ t('weather.pressure') }} {{ Math.round(data.pressureHpa) }} hPa
+              </div>
+              <div v-if="visText">{{ t('weather.visibility') }} {{ visText }}</div>
+              <div v-if="data.uvIndex != null">{{ t('weather.uv') }} {{ data.uvIndex }}</div>
+              <div v-if="precipText" class="tp-wx-span">{{ t('weather.precip') }} {{ precipText }}</div>
+              <div v-if="data.sunrise">{{ t('weather.sunrise') }} {{ data.sunrise }}</div>
+              <div v-if="data.sunset">{{ t('weather.sunset') }} {{ data.sunset }}</div>
+              <div v-if="aqiText" class="tp-wx-span">{{ t('weather.aqi') }} {{ aqiText }}</div>
+              <div v-if="data.alert" class="tp-wx-alert tp-wx-span">{{ data.alert }}</div>
+              <div class="tp-wx-span tp-text-faint">{{ t('weather.updatedAt', { time: updatedText }) }}</div>
             </div>
             <div v-else class="text-[11px] tp-text-dim">{{ t('weather.unavailable') }}</div>
             <div class="mt-1.5 flex justify-end">

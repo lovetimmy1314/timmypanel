@@ -35,6 +35,9 @@ const (
 
 // Weather 是给前端的当前天气。温度一律摄氏度，换算成华氏由前端做
 // ——单位是显示偏好，不该让缓存按单位再分一份。
+//
+// 带 omitempty / 指针的字段只有和风才填。Open-Meteo 没有这些，前端按缺席藏行，
+// 不占空位。
 type Weather struct {
 	TempC      float64  `json:"tempC"`
 	FeelsLikeC float64  `json:"feelsLikeC"`
@@ -45,6 +48,18 @@ type Weather struct {
 	MaxC       *float64 `json:"maxC"` // 今日最高/最低。上游偶尔不给 daily，这时是 null
 	MinC       *float64 `json:"minC"`
 	UpdatedAt  int64    `json:"updatedAt"` // 这份数据是什么时候抓的，unix 秒
+
+	ConditionText string   `json:"conditionText,omitempty"` // 和风原文，如「少云」
+	WindDir       string   `json:"windDir,omitempty"`       // 罗盘码 sw / nne，前端翻成「西南风」
+	UVIndex       *int     `json:"uvIndex,omitempty"`
+	VisibilityKm  *float64 `json:"visibilityKm,omitempty"`
+	PressureHpa   *float64 `json:"pressureHpa,omitempty"`
+	PrecipMm      *float64 `json:"precipMm,omitempty"` // 近 1 小时，0 不传
+	Sunrise       string   `json:"sunrise,omitempty"`  // 当地 HH:MM
+	Sunset        string   `json:"sunset,omitempty"`
+	AQI           *int     `json:"aqi,omitempty"`
+	AQICategory   string   `json:"aqiCategory,omitempty"`
+	Alert         string   `json:"alert,omitempty"` // 一条生效预警标题，没有就不传
 }
 
 // GeoPlace 是地点搜索的一条结果。
@@ -136,14 +151,19 @@ func ValidCoord(lat, lon float64) bool {
 
 // Current 返回某个坐标的当前天气，10 分钟内的重复请求直接吃缓存。
 // user 是这次请求的用户凭据；没配齐就回落到实例级 yaml。
-func (w *WeatherService) Current(lat, lon float64, user QWeatherCreds) (*Weather, error) {
+// lang 只影响和风的现象名 / AQI 类别 / 预警标题，Open-Meteo 不用。
+func (w *WeatherService) Current(lat, lon float64, user QWeatherCreds, lang string) (*Weather, error) {
 	if !ValidCoord(lat, lon) {
 		return nil, errors.New("坐标不合法")
 	}
+	if lang != "en" {
+		lang = "zh"
+	}
 	qlat, qlon := quantizeCoord(lat), quantizeCoord(lon)
 	creds := w.resolveCreds(user)
-	// 缓存键带上游前缀：切到和风之后不能把 Open-Meteo 那格的旧数据当新的用。
-	key := fmt.Sprintf("%s:%.2f,%.2f", providerPrefix(creds), qlat, qlon)
+	// 缓存键带上游前缀和语言：切到和风之后不能把 Open-Meteo 那格的旧数据当新的用，
+	// 中英文的现象名 / 预警标题也不能混在同一格。
+	key := fmt.Sprintf("%s:%s:%.2f,%.2f", providerPrefix(creds), lang, qlat, qlon)
 
 	if v, hit := w.cachedWeather(key); hit {
 		return &v, nil
@@ -154,7 +174,7 @@ func (w *WeatherService) Current(lat, lon float64, user QWeatherCreds) (*Weather
 		err error
 	)
 	if creds.ok() {
-		out, err = w.currentQWeather(qlat, qlon, creds)
+		out, err = w.currentQWeather(qlat, qlon, creds, lang)
 	} else {
 		out, err = w.currentOpenMeteo(qlat, qlon)
 	}

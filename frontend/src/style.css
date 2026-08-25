@@ -279,10 +279,37 @@ body {
   cursor: pointer;
 }
 
-.tp-float-detail {
+.tp-wx-panel {
+  width: 168px;
   margin-top: 6px;
-  padding: 6px 6px 2px;
+  padding: 8px 6px 2px;
   border-top: 1px solid var(--tp-surface-border);
+  transform-origin: top left;
+}
+.tp-wx-panel-wide {
+  width: 248px;
+}
+.tp-wx-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px 10px;
+  color: var(--tp-fg-dim);
+  font-size: 11px;
+}
+.tp-wx-panel-wide .tp-wx-grid {
+  grid-template-columns: 1fr 1fr;
+}
+.tp-wx-cond,
+.tp-wx-span {
+  grid-column: 1 / -1;
+}
+.tp-wx-cond {
+  color: var(--tp-fg-soft);
+  font-size: 12px;
+}
+.tp-wx-alert {
+  color: var(--tp-fg-soft);
+  line-height: 1.35;
 }
 
 @keyframes tp-float-in {
@@ -310,18 +337,15 @@ body {
   animation: tp-float-pulse 1.4s ease-in-out infinite;
 }
 
-/* 展开详情：高度 + 透明度一起过渡。行数固定，max-height 给足即可 */
-.tp-float-detail-enter-active,
-.tp-float-detail-leave-active {
-  transition: opacity 0.2s ease, max-height 0.24s ease, margin-top 0.24s ease;
-  overflow: hidden;
-  max-height: 200px;
+/* 天气详情：从左上角缩放淡入，和万年历的 tp-cal-pop 对称 */
+.tp-wx-pop-enter-active,
+.tp-wx-pop-leave-active {
+  transition: opacity 0.18s ease, transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.tp-float-detail-enter-from,
-.tp-float-detail-leave-to {
+.tp-wx-pop-enter-from,
+.tp-wx-pop-leave-to {
   opacity: 0;
-  max-height: 0;
-  margin-top: 0;
+  transform: scale(0.92) translateY(-6px);
 }
 
 /* 万年历月面板。宽度写死是刻意的：7 列格子按比例伸缩会让农历那行的两个字
@@ -498,7 +522,7 @@ body {
    给的是顶栏那一行的内边距，不推整页内容。 */
 @media (min-width: 1024px) {
   .tp-header-gap-l {
-    padding-left: 148px;
+    padding-left: 168px;
   }
   .tp-header-gap-r {
     padding-right: 148px;
@@ -510,8 +534,8 @@ body {
   .tp-float-pulse {
     animation: none;
   }
-  .tp-float-detail-enter-active,
-  .tp-float-detail-leave-active,
+  .tp-wx-pop-enter-active,
+  .tp-wx-pop-leave-active,
   .tp-cal-pop-enter-active,
   .tp-cal-pop-leave-active,
   .tp-cal-next-enter-active,
@@ -523,7 +547,8 @@ body {
   /* 过渡关掉之后位移不能留在起始态，否则新的一屏会停在偏移位置上 */
   .tp-cal-next-enter-from,
   .tp-cal-prev-enter-from,
-  .tp-cal-pop-enter-from {
+  .tp-cal-pop-enter-from,
+  .tp-wx-pop-enter-from {
     opacity: 1;
     transform: none;
   }

@@ -219,7 +219,11 @@ func TestQWeatherCurrentToWeather(t *testing.T) {
 	  "temperature": {"value": 31.71, "unit": "°C"},
 	  "feelsLike": {"value": 33.64, "unit": "°C"},
 	  "humidity": 0.69,
-	  "wind": {"speed": {"value": 4.74, "unit": "m/s"}}
+	  "wind": {"direction": {"compass": "SW"}, "speed": {"value": 4.74, "unit": "m/s"}},
+	  "precipitation": {"amount": {"value": 0.8, "unit": "mm"}},
+	  "pressure": {"value": 1001.5, "unit": "hPa"},
+	  "visibility": {"value": 29020, "unit": "m"},
+	  "uvIndex": 3
 	}`
 	var resp qwCurrentResponse
 	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
@@ -240,6 +244,21 @@ func TestQWeatherCurrentToWeather(t *testing.T) {
 	}
 	if math.Abs(out.WindKph-4.74*3.6) > 1e-9 {
 		t.Fatalf("风速应按 m/s×3.6 转 km/h，得到 %v", out.WindKph)
+	}
+	if out.ConditionText != "少云" || out.WindDir != "sw" {
+		t.Fatalf("现象/风向不对: %+v", out)
+	}
+	if out.UVIndex == nil || *out.UVIndex != 3 {
+		t.Fatalf("紫外线不对: %+v", out)
+	}
+	if out.VisibilityKm == nil || math.Abs(*out.VisibilityKm-29.02) > 1e-9 {
+		t.Fatalf("能见度应对 m÷1000: %+v", out)
+	}
+	if out.PressureHpa == nil || *out.PressureHpa != 1001.5 {
+		t.Fatalf("气压不对: %+v", out)
+	}
+	if out.PrecipMm == nil || *out.PrecipMm != 0.8 {
+		t.Fatalf("降水不对: %+v", out)
 	}
 	if !out.IsDay {
 		t.Fatal("没有日预报时昼夜默认白天")
@@ -287,10 +306,94 @@ func TestQWeatherDailyApply(t *testing.T) {
 	if !out.IsDay {
 		t.Fatal("正午应判为白天")
 	}
+	if out.Sunrise != "04:22" || out.Sunset != "19:34" {
+		t.Fatalf("日出日落应对当地钟点: sunrise=%q sunset=%q", out.Sunrise, out.Sunset)
+	}
 	now = time.Date(2024, 8, 11, 21, 0, 0, 0, time.UTC)
 	daily.apply(out, now)
 	if out.IsDay {
 		t.Fatal("日落后应判为夜间")
+	}
+}
+
+func TestQWeatherCurrentZeroPrecipAndBadWind(t *testing.T) {
+	raw := `{
+	  "condition": {"code": "100"},
+	  "temperature": {"value": 20},
+	  "wind": {"direction": {"compass": "vrb"}},
+	  "precipitation": {"amount": {"value": 0}}
+	}`
+	var resp qwCurrentResponse
+	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+		t.Fatal(err)
+	}
+	out, err := resp.toWeather(1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.PrecipMm != nil {
+		t.Fatalf("降水 0 不该传: %+v", out)
+	}
+	if out.WindDir != "" {
+		t.Fatalf("vrb 不是固定风向: %q", out.WindDir)
+	}
+}
+
+func TestPickAQI(t *testing.T) {
+	cn := 46.0
+	us := 80.0
+	qa := 0.9
+	got := pickAQI([]qwAirIndex{
+		{Code: "us-epa", AQI: &us, Category: "Good"},
+		{Code: "cn-mee", AQI: &cn, Category: "优"},
+		{Code: "qaqi", AQI: &qa, Category: "Excellent"},
+	})
+	if got == nil || got.Code != "cn-mee" {
+		t.Fatalf("应优先 cn-mee: %+v", got)
+	}
+	got = pickAQI([]qwAirIndex{
+		{Code: "qaqi", AQI: &qa},
+		{Code: "us-epa", AQI: &us, Category: "Good"},
+	})
+	if got == nil || got.Code != "us-epa" {
+		t.Fatalf("没有国标时应拿本地指数: %+v", got)
+	}
+	var air qwAirResponse
+	air.Indexes = []qwAirIndex{{Code: "cn-mee", AQI: &cn, Category: "优"}}
+	out := &Weather{}
+	air.apply(out)
+	if out.AQI == nil || *out.AQI != 46 || out.AQICategory != "优" {
+		t.Fatalf("AQI 没写上: %+v", out)
+	}
+}
+
+func TestQWeatherAlertApply(t *testing.T) {
+	raw := `{
+	  "alerts": [
+	    {"headline":"过期","messageType":{"code":"cancel"}},
+	    {"headline":"临桂区气象台更新大风蓝色预警信号","messageType":{"code":"update"},
+	     "eventType":{"name":"大风"},"color":{"code":"blue"}}
+	  ]
+	}`
+	var resp qwAlertResponse
+	if err := json.Unmarshal([]byte(raw), &resp); err != nil {
+		t.Fatal(err)
+	}
+	out := &Weather{}
+	resp.apply(out)
+	if out.Alert != "临桂区气象台更新大风蓝色预警信号" {
+		t.Fatalf("应跳过 cancel 取第一条生效预警: %q", out.Alert)
+	}
+
+	// 另起一份：json.Unmarshal 复用切片底层数组时，缺席字段会留下一次的值。
+	var fallback qwAlertResponse
+	if err := json.Unmarshal([]byte(`{"alerts":[{"eventType":{"name":"暴雨"},"color":{"code":"orange"},"messageType":{"code":"alert"}}]}`), &fallback); err != nil {
+		t.Fatal(err)
+	}
+	out = &Weather{}
+	fallback.apply(out)
+	if out.Alert != "暴雨 orange" {
+		t.Fatalf("没标题时应拼事件+颜色: %q", out.Alert)
 	}
 }
 

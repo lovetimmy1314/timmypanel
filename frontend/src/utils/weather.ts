@@ -39,6 +39,17 @@ export function weatherLabelKey(code: number): MessageKey {
   return `weather.cond.${weatherGroup(code)}` as MessageKey
 }
 
+const WIND_DIRS = new Set([
+  'n', 'nne', 'ne', 'ene', 'e', 'ese', 'se', 'sse',
+  's', 'ssw', 'sw', 'wsw', 'w', 'wnw', 'nw', 'nnw',
+])
+
+export function windDirKey(dir: string): MessageKey | '' {
+  const k = dir.toLowerCase()
+  if (!WIND_DIRS.has(k)) return ''
+  return `weather.dir.${k}` as MessageKey
+}
+
 // 摄氏转华氏。接口一律回摄氏度，单位只是显示偏好（决策 033）。
 export function formatTemp(celsius: number, unit: 'c' | 'f'): string {
   const v = unit === 'f' ? celsius * 1.8 + 32 : celsius

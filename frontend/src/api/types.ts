@@ -102,6 +102,18 @@ export interface Weather {
   maxC: number | null // 上游偶尔不给当日区间，这时是 null，不是 0
   minC: number | null
   updatedAt: number // unix 秒
+  // 下面这些只有和风才给。缺席就藏行，Open-Meteo 详情卡保持原来那几行。
+  conditionText?: string
+  windDir?: string
+  uvIndex?: number | null
+  visibilityKm?: number | null
+  pressureHpa?: number | null
+  precipMm?: number | null
+  sunrise?: string
+  sunset?: string
+  aqi?: number | null
+  aqiCategory?: string
+  alert?: string
 }
 
 // GET /calendar/month 的一天。农历、节气、节日名都是后端拼好的中文，
