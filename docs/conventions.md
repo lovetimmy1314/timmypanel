@@ -102,14 +102,16 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 写**做了什么**，不写「update code」这种等于没说的话。改动背后的取舍如果值得留存，
 正文里指一下 `docs/decisions.md` 的条目号，别把整段理由塞进提交信息。
 
+**每次提交后必须打上迭代版本号 tag**：
+每次完成代码修改并提交后，**必须紧接着打上递增的迭代 tag 版本号**（遵循 SemVer 规范，格式 `vMAJOR.MINOR.PATCH`），方便版本管理与精准回溯：
+- 查看当前最新 tag：`git describe --tags --abbrev=0` 或 `git tag -l "v*.*.*"`。
+- 常规代码修改 / bug 修复 / 重构：patch +1（如 `v1.0.0` → `v1.0.1`）。
+- 新功能或较大调整：minor +1（如 `v1.1.0`）；破坏性变更：major +1。
+- 打 tag 命令：`git tag vX.Y.Z`。
+- CI 配合：`.github/workflows/docker.yml` 会优先识别 HEAD 上的 exact-match tag（决策 037、038），推上远端后会直接继承该版本号构建镜像并开 GitHub Release，保持本地与线上版本完全对齐。本地 `go run` 仍是 `dev`，`build.ps1` 默认仍是日期号（可手动传参 `-Version` 指定）。
+
 维护者日常直接提交到 `main`，不开分支（除非在试一个可能推倒重来的方案）。
 外部贡献走分支 + PR，PR 前把上面那两条检查跑过。
-
-**推上 `main` 就会自动打下一个 patch tag**（`v1.0.0` → `v1.0.1`）并开 GitHub Release，
-镜像同时带这个版本号和 `latest`（决策 037）。不要手打 `v*` 来「补一次发版」——
-那个提交已经有 tag 了。要跳 minor / major，在 Actions 里手动跑「构建并推送镜像」，
-bump 选 `minor` 或 `major`。本地 `go run` 仍是 `dev`，`build.ps1` 默认仍是日期号，
-只有 CI 出的产物带 semver。
 
 会被忽略的：`data/`（含配置里的密钥和 sqlite）、根目录 `dist/`（二进制）、
 `node_modules/`、`backend/internal/web/dist/assets/`、

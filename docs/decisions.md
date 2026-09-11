@@ -328,3 +328,15 @@ JSON 时能看到明文——备份文件本来就按账号私有对待，和会
 - 每个合进 main 的提交都是一个 Release，历史会比较碎；按 commit 信息自动生成 notes，
   大改仍建议手写。
 - 钉 `TP_TAG=1.2.3` 的实例不会跟着 `latest` 走，要自己改 tag 或改回 `latest`。
+
+## 038 每次代码修改提交后必须打迭代版本号 tag
+
+状态：生效。相关：`CLAUDE.md`、`docs/conventions.md`、`docs/decisions.md`、`.github/workflows/docker.yml`、决策 037。
+
+为了方便本地与远程统一进行精细化版本管理与问题追溯，明确规范：**每次修改代码并完成 `git commit` 后，必须紧接着打上递增的迭代 tag 版本号**。
+
+- 格式遵循 SemVer 规范（`vMAJOR.MINOR.PATCH`），常规代码提交默认 patch +1（如 `v1.0.0` → `v1.0.1`）；涉及较大特性迭代 bump minor，破坏性架构调整 bump major。
+- 打 tag 命令：`git tag vX.Y.Z`。
+- CI 配合：`.github/workflows/docker.yml` 内置了 `git describe --exact-match --tags HEAD` 逻辑。当当前提交本地已打上 `v*` tag 并推送到远端时，GitHub Actions 会直接识别该 tag 并以此版本发布镜像与 GitHub Release，实现本地与线上版本的一致性。
+
+代价：每次完成提交都需执行一次打 tag 操作；tag 数量随 commit 增长。
