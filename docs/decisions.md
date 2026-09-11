@@ -329,14 +329,13 @@ JSON 时能看到明文——备份文件本来就按账号私有对待，和会
   大改仍建议手写。
 - 钉 `TP_TAG=1.2.3` 的实例不会跟着 `latest` 走，要自己改 tag 或改回 `latest`。
 
-## 038 每次代码修改提交后必须打迭代版本号 tag
+## 038 只有修改代码提交才打迭代 tag，纯文件与落盘文件不打 tag
 
 状态：生效。相关：`CLAUDE.md`、`docs/conventions.md`、`docs/decisions.md`、`.github/workflows/docker.yml`、决策 037。
 
-为了方便本地与远程统一进行精细化版本管理与问题追溯，明确规范：**每次修改代码并完成 `git commit` 后，必须紧接着打上递增的迭代 tag 版本号**。
+为了精准进行应用版本管理与回溯，同时避免文档更新空耗版本号，明确规范区分：
 
-- 格式遵循 SemVer 规范（`vMAJOR.MINOR.PATCH`），常规代码提交默认 patch +1（如 `v1.0.0` → `v1.0.1`）；涉及较大特性迭代 bump minor，破坏性架构调整 bump major。
-- 打 tag 命令：`git tag vX.Y.Z`。
-- CI 配合：`.github/workflows/docker.yml` 内置了 `git describe --exact-match --tags HEAD` 逻辑。当当前提交本地已打上 `v*` tag 并推送到远端时，GitHub Actions 会直接识别该 tag 并以此版本发布镜像与 GitHub Release，实现本地与线上版本的一致性。
+- **只有修改实际代码才打 tag**：当提交包含后端（Go）、前端（Vue/TS/CSS/HTML）等应用代码改动时，完成 `git commit` 后必须紧接着打上递增的迭代 tag 版本号（遵循 SemVer 规范 `vMAJOR.MINOR.PATCH`，常规代码修改 patch +1，如 `v1.0.0` → `v1.0.1`）。推送到远端时 CI 直接识别该 tag 进行镜像发布和 Release。
+- **纯文件与落盘文件改动只提交不打 tag**：修改 `docs/`（plans.md、decisions.md、conventions.md）、README 以及其它纯文档/说明性落盘文件时，正常提交 commit，**不打 tag**。
 
-代价：每次完成提交都需执行一次打 tag 操作；tag 数量随 commit 增长。
+代价：提交时需根据变更文件类型区分是否执行 `git tag`。

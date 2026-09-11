@@ -102,13 +102,14 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>
 写**做了什么**，不写「update code」这种等于没说的话。改动背后的取舍如果值得留存，
 正文里指一下 `docs/decisions.md` 的条目号，别把整段理由塞进提交信息。
 
-**每次提交后必须打上迭代版本号 tag**：
-每次完成代码修改并提交后，**必须紧接着打上递增的迭代 tag 版本号**（遵循 SemVer 规范，格式 `vMAJOR.MINOR.PATCH`），方便版本管理与精准回溯：
-- 查看当前最新 tag：`git describe --tags --abbrev=0` 或 `git tag -l "v*.*.*"`。
-- 常规代码修改 / bug 修复 / 重构：patch +1（如 `v1.0.0` → `v1.0.1`）。
-- 新功能或较大调整：minor +1（如 `v1.1.0`）；破坏性变更：major +1。
-- 打 tag 命令：`git tag vX.Y.Z`。
-- CI 配合：`.github/workflows/docker.yml` 会优先识别 HEAD 上的 exact-match tag（决策 037、038），推上远端后会直接继承该版本号构建镜像并开 GitHub Release，保持本地与线上版本完全对齐。本地 `go run` 仍是 `dev`，`build.ps1` 默认仍是日期号（可手动传参 `-Version` 指定）。
+**只有修改代码才打迭代版本号 tag，纯文档与落盘文件只提交不打 tag**：
+- **代码改动**：当提交包含后端 Go、前端 Vue/TS/CSS/HTML 等应用代码时，提交完成后**必须紧接着打上递增的迭代 tag 版本号**（遵循 SemVer 规范，格式 `vMAJOR.MINOR.PATCH`），方便版本管理与精准回溯：
+  - 查看当前最新 tag：`git describe --tags --abbrev=0` 或 `git tag -l "v*.*.*"`。
+  - 常规代码修改 / bug 修复 / 重构：patch +1（如 `v1.0.0` → `v1.0.1`）。
+  - 新功能或较大调整：minor +1（如 `v1.1.0`）；破坏性变更：major +1。
+  - 打 tag 命令：`git tag vX.Y.Z`。
+  - CI 配合：`.github/workflows/docker.yml` 会优先识别 HEAD 上的 exact-match tag（决策 037、038），推上远端后会直接继承该版本号构建镜像并开 GitHub Release，保持本地与线上版本完全对齐。本地 `go run` 仍是 `dev`，`build.ps1` 默认仍是日期号（可手动传参 `-Version` 指定）。
+- **纯文件 / 落盘文件改动**：若提交仅修改 `docs/`（plans.md、decisions.md、conventions.md）、`README*` 等文档与落盘记录，**只做 git commit，绝不打 tag**，避免空耗版本号。
 
 维护者日常直接提交到 `main`，不开分支（除非在试一个可能推倒重来的方案）。
 外部贡献走分支 + PR，PR 前把上面那两条检查跑过。
