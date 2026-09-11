@@ -86,6 +86,10 @@ export interface Settings {
     enabled: boolean
     weekStart: 'mon' | 'sun'
   }
+  quickAccess: {
+    enabled: boolean
+    siteIds: number[]
+  }
   theme: 'auto' | 'light' | 'dark'
   language: 'zh' | 'en'
   network: 'wan' | 'lan'

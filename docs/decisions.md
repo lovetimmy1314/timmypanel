@@ -335,7 +335,21 @@ JSON 时能看到明文——备份文件本来就按账号私有对待，和会
 
 为了精准进行应用版本管理与回溯，同时避免文档更新空耗版本号，明确规范区分：
 
-- **只有修改实际代码才打 tag**：当提交包含后端（Go）、前端（Vue/TS/CSS/HTML）等应用代码改动时，完成 `git commit` 后必须紧接着打上递增的迭代 tag 版本号（遵循 SemVer 规范 `vMAJOR.MINOR.PATCH`，常规代码修改 patch +1，如 `v1.0.0` → `v1.0.1`）。推送到远端时 CI 直接识别该 tag 进行镜像发布和 Release。
+- **只有修改实际代码才打 tag**：当提交包含后端（Go）、前端（Vue/TS/CSS/HTML）等应用代码改动时，完成 `git commit` 后必须紧接着打上递增的迭代 tag 版本号（遵循 SemVer规范 `vMAJOR.MINOR.PATCH`，常规代码修改 patch +1，如 `v1.0.0` → `v1.0.1`）。推送到远端时 CI 直接识别该 tag 进行镜像发布和 Release。
 - **纯文件与落盘文件改动只提交不打 tag**：修改 `docs/`（plans.md、decisions.md、conventions.md）、README 以及其它纯文档/说明性落盘文件时，正常提交 commit，**不打 tag**。
 
 代价：提交时需根据变更文件类型区分是否执行 `git tag`。
+
+## 039 桌面端右侧悬浮快捷访问卡片
+
+状态：生效。相关：`backend/internal/model/settings.go`、`backend/internal/api/setting.go`、
+`frontend/src/components/QuickAccessFloat.vue`、`frontend/src/components/settings/QuickAccessPanel.vue`、
+`frontend/src/views/Home.vue`。
+
+用户需要快速直达常用高频网站。三个有取舍的选择：
+
+- **桌面端限定，移动端不挂载。** 做法同天气（决策 033）和万年历（决策 034）：手机屏幕空间狭窄，侧边悬浮容易误触并遮挡卡片列表，因此通过 `useIsDesktop` 仅在桌面断点以上挂载。
+- **卡片只展示图标与名称，描述仅鼠标悬停时气泡展示。** 悬浮条要足够精致小巧，过长的描述直接平铺会把侧栏拉得极宽或垂直高度过长。
+- **数据存 `Settings.quickAccess`，从已收录网站勾选并支持排序。** 不另起一套数据表，老账号向前兼容补默认值。提供一键折叠为侧边迷你药丸的能力，避免阻挡主栅格。
+
+代价：右侧固定悬浮卡片占用视口右侧空白边距，在 1024px~1280px 紧凑视口下可通过折叠态收起或在设置中完全关闭。

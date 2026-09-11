@@ -34,6 +34,7 @@ const DEFAULT_SETTINGS: Settings = {
     qweatherKey: '',
   },
   calendar: { enabled: true, weekStart: 'mon' },
+  quickAccess: { enabled: true, siteIds: [] },
   theme: 'auto',
   language: 'zh',
   network: 'wan',
@@ -89,6 +90,11 @@ export const usePanelStore = defineStore('panel', () => {
         },
         weather: { ...DEFAULT_SETTINGS.weather, ...st.weather },
         calendar: { ...DEFAULT_SETTINGS.calendar, ...st.calendar },
+        quickAccess: {
+          ...DEFAULT_SETTINGS.quickAccess,
+          ...st.quickAccess,
+          siteIds: st.quickAccess?.siteIds ?? [],
+        },
       }
       // 服务端的语言是权威值，盖掉 localStorage 里那份起手值（见 src/i18n/index.ts）。
       setLocale(settings.value.language)

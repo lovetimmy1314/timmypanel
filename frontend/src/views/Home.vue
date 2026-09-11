@@ -15,6 +15,7 @@ import BackTop from '@/components/BackTop.vue'
 import GroupJump from '@/components/GroupJump.vue'
 import WeatherFloat from '@/components/WeatherFloat.vue'
 import CalendarFloat from '@/components/CalendarFloat.vue'
+import QuickAccessFloat from '@/components/QuickAccessFloat.vue'
 import BrandMark from '@/components/BrandMark.vue'
 import { usePanelStore } from '@/stores/panel'
 import { useUserStore } from '@/stores/user'
@@ -43,9 +44,9 @@ const showEditor = ref(false)
 const showImport = ref(false)
 const showSettings = ref(false)
 // 设置弹窗打开时落在哪一栏。顶栏那个齿轮不指定，走默认的「个性化」。
-const settingsPanel = ref<'appearance' | 'weather' | 'calendar'>('appearance')
+const settingsPanel = ref<'appearance' | 'weather' | 'calendar' | 'quickAccess'>('appearance')
 
-function openSettings(panelKey: 'appearance' | 'weather' | 'calendar' = 'appearance') {
+function openSettings(panelKey: 'appearance' | 'weather' | 'calendar' | 'quickAccess' = 'appearance') {
   settingsPanel.value = panelKey
   showSettings.value = true
 }
@@ -63,6 +64,8 @@ const isDesktop = useIsDesktop()
 const showWeather = computed(() => isDesktop.value && panel.settings.weather.enabled)
 // 万年历同理，占右上角（决策 034）。
 const showCalendar = computed(() => isDesktop.value && panel.settings.calendar.enabled)
+// 快捷访问卡片：桌面端 + 设置里开启才显示
+const showQuickAccess = computed(() => isDesktop.value && panel.settings.quickAccess?.enabled)
 
 const isBoardEditing = (groupId: number) => editing.value || groupEditing.value === groupId
 
@@ -699,6 +702,9 @@ onMounted(async () => {
 
     <!-- 右上角悬浮万年历。同样只在桌面端挂载 -->
     <CalendarFloat v-if="showCalendar" @configure="openSettings('calendar')" />
+
+    <!-- 右侧悬浮快捷访问卡片。同样只在桌面端挂载 -->
+    <QuickAccessFloat v-if="showQuickAccess" @configure="openSettings('quickAccess')" />
 
     <BackTop />
     <GroupJump :boards="visibleBoards" @jump="jumpToGroup" />

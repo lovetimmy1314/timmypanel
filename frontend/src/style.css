@@ -268,6 +268,106 @@ body {
   background: var(--tp-surface-hover);
 }
 
+/* ---- 右侧快捷访问悬浮卡片 ---- */
+.tp-quick-float {
+  position: fixed;
+  right: calc(14px + env(safe-area-inset-right));
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+}
+
+.tp-quick-card {
+  width: 172px;
+  max-height: calc(100vh - 180px);
+  padding: 8px;
+  border-radius: 16px;
+  color: var(--tp-fg);
+  backdrop-filter: blur(16px);
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-surface-border);
+  box-shadow: var(--tp-card-shadow);
+  transition: background 0.18s ease;
+  animation: tp-quick-in 0.38s cubic-bezier(0.22, 1, 0.36, 1) both;
+  display: flex;
+  flex-direction: column;
+}
+
+.tp-quick-card:hover {
+  background: var(--tp-surface-hover);
+}
+
+.tp-quick-list::-webkit-scrollbar {
+  width: 4px;
+}
+.tp-quick-list::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.25);
+  border-radius: 4px;
+}
+
+.tp-quick-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--tp-fg);
+  transition: background 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
+}
+.tp-quick-item:hover {
+  background: rgba(0, 0, 0, 0.05);
+  transform: translateX(-2px);
+}
+[data-theme="dark"] .tp-quick-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.tp-quick-collapsed-tab {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 5px;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+  backdrop-filter: blur(16px);
+  background: var(--tp-surface);
+  border: 1px solid var(--tp-surface-border);
+  border-right: none;
+  box-shadow: var(--tp-card-shadow);
+  color: var(--tp-fg-dim);
+  cursor: pointer;
+  transition: all 0.18s ease;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+.tp-quick-collapsed-tab:hover {
+  color: var(--tp-fg);
+  background: var(--tp-surface-hover);
+  padding-right: 8px;
+}
+
+@keyframes tp-quick-in {
+  from {
+    opacity: 0;
+    transform: translate3d(14px, 0, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
 .tp-float-pill {
   display: flex;
   align-items: center;
@@ -531,7 +631,8 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .tp-float-card,
-  .tp-float-pulse {
+  .tp-float-pulse,
+  .tp-quick-card {
     animation: none;
   }
   .tp-wx-pop-enter-active,

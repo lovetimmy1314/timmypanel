@@ -26,6 +26,7 @@ It ships as **one executable plus one data directory**. The web UI is compiled i
 - Light / dark theme; image, solid or gradient wallpapers
 - Floating weather widget in the top-left corner on desktop (optional, never shown on phones): pick a city or district, or use browser geolocation — the server fetches and caches it from Open-Meteo by default (no key). To resolve Chinese districts more reliably, switch to QWeather in the weather settings; your browser never talks to the weather API
 - Floating Chinese calendar in the top-right corner on desktop (optional, never shown on phones): lunar dates, the 24 solar terms and traditional festivals, with a full-month panel; public-holiday and make-up workday badges appear for the years covered by the published schedule
+- Floating Quick Access card on the right side on desktop (optional, never shown on phones): fast access to frequently visited sites, showing icon and title only with descriptions revealed on hover, selectable and reorderable from your collected sites
 - Chinese and English UI; works on phones; can be added to the home screen
 - Isolated accounts; JSON / ZIP backup and restore; daily snapshots on the server
 - No third-party requests from the browser — icon sets are bundled, not fetched from a CDN. With the weather widget on, the outbound call happens on the server

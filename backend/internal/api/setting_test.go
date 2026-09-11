@@ -266,3 +266,39 @@ func TestNormalizeCalendarConf(t *testing.T) {
 		t.Error("合法值 sun 被改掉了")
 	}
 }
+
+func TestNormalizeQuickAccessConf(t *testing.T) {
+	// nil 切片应补空切片
+	qa := model.QuickAccessConf{Enabled: true, SiteIDs: nil}
+	normalizeQuickAccessConf(&qa)
+	if qa.SiteIDs == nil || len(qa.SiteIDs) != 0 {
+		t.Fatalf("nil siteIds 应转为空切片，得到: %#v", qa.SiteIDs)
+	}
+
+	// 过滤 0 与重复项
+	qa = model.QuickAccessConf{
+		Enabled: true,
+		SiteIDs: []uint{1, 2, 0, 2, 3, 1, 4},
+	}
+	normalizeQuickAccessConf(&qa)
+	expected := []uint{1, 2, 3, 4}
+	if len(qa.SiteIDs) != len(expected) {
+		t.Fatalf("期望长度 %d，实际 %d: %v", len(expected), len(qa.SiteIDs), qa.SiteIDs)
+	}
+	for i, v := range expected {
+		if qa.SiteIDs[i] != v {
+			t.Errorf("下标 %d 期望 %d，实际 %d", i, v, qa.SiteIDs[i])
+		}
+	}
+
+	// 超过上限截断到 64
+	overflow := make([]uint, 100)
+	for i := range overflow {
+		overflow[i] = uint(i + 1)
+	}
+	qa = model.QuickAccessConf{Enabled: true, SiteIDs: overflow}
+	normalizeQuickAccessConf(&qa)
+	if len(qa.SiteIDs) != maxQuickAccessSites {
+		t.Fatalf("超长 siteIds 应截断到 %d，实际 %d", maxQuickAccessSites, len(qa.SiteIDs))
+	}
+}

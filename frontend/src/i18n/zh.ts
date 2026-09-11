@@ -201,6 +201,8 @@ export const zh = {
   'settings.nav.weatherDesc': '左上角悬浮天气，含定位、单位和数据源',
   'settings.nav.calendar': '万年历',
   'settings.nav.calendarDesc': '右上角悬浮万年历，含农历和节假日',
+  'settings.nav.quickAccess': '快捷访问',
+  'settings.nav.quickAccessDesc': '右侧悬浮卡片，快速访问常用网站',
   'settings.nav.search': '搜索设置',
   'settings.nav.searchDesc': '搜索框、搜索引擎和默认搜索源',
   'settings.nav.groups': '分组管理',
@@ -502,6 +504,27 @@ export const zh = {
   'calendar.w4': '四',
   'calendar.w5': '五',
   'calendar.w6': '六',
+
+  // 快捷访问
+  'quickAccess.title': '快捷访问',
+  'quickAccess.enabled': '开启快捷访问',
+  'quickAccess.pcOnlyHint': '只在桌面端显示，手机上不占地方',
+  'quickAccess.empty': '暂无勾选的网站',
+  'quickAccess.emptyHint': '在设置中勾选已收录的网站',
+  'quickAccess.toSettings': '去设置添加',
+  'quickAccess.settings': '设置',
+  'quickAccess.collapse': '收起快捷访问',
+  'quickAccess.expand': '展开快捷访问',
+  'quickAccess.selectSites': '勾选快捷网站',
+  'quickAccess.selectSitesHint': '从已收录的网址中勾选要显示在右侧卡片中的网站，支持拖拽调整顺序',
+  'quickAccess.searchPlaceholder': '搜索已收录网站...',
+  'quickAccess.selectAll': '全选',
+  'quickAccess.clearAll': '清空',
+  'quickAccess.selectGroup': '全选本组',
+  'quickAccess.unselectGroup': '取消本组',
+  'quickAccess.selectedOrder': '已选网站（可拖拽排序）',
+  'quickAccess.selectedCount': '已选择 {n} 个网站',
+  'quickAccess.noSitesAvailable': '暂无收录的网站，请先在首页添加网站',
 } as const
 
 export type MessageKey = keyof typeof zh

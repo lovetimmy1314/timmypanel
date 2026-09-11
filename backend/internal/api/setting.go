@@ -153,6 +153,31 @@ func normalizeCalendarConf(cal *model.CalendarConf) {
 	}
 }
 
+// maxQuickAccessSites 是快捷访问卡片收录网站的上限。
+const maxQuickAccessSites = 64
+
+// normalizeQuickAccessConf 收紧快捷访问配置。
+// siteIds 限制最大数量，去重并过滤无效 ID（如 0）。
+func normalizeQuickAccessConf(qa *model.QuickAccessConf) {
+	if qa.SiteIDs == nil {
+		qa.SiteIDs = []uint{}
+		return
+	}
+	if len(qa.SiteIDs) > maxQuickAccessSites {
+		qa.SiteIDs = qa.SiteIDs[:maxQuickAccessSites]
+	}
+	seen := make(map[uint]bool, len(qa.SiteIDs))
+	ids := qa.SiteIDs[:0]
+	for _, id := range qa.SiteIDs {
+		if id == 0 || seen[id] {
+			continue
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+	qa.SiteIDs = ids
+}
+
 // normalizeEngineName 把「默认搜索源」收回到 local 或某个确实存在的引擎名上。
 // 用户删掉当前默认引擎之后这个字段会悬空，搜索栏会选中一个不存在的项。
 func normalizeEngineName(name string, engines []model.SearchEngine) string {
@@ -250,6 +275,7 @@ func normalizeSettings(in *model.Settings) {
 
 	normalizeWeatherConf(&in.Weather)
 	normalizeCalendarConf(&in.Calendar)
+	normalizeQuickAccessConf(&in.QuickAccess)
 
 	// 就地过滤：engines 和 in.Search.Engines 共用底层数组，写下标永远不超过读下标。
 	engines := in.Search.Engines[:0]

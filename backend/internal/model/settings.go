@@ -84,20 +84,28 @@ type CalendarConf struct {
 	WeekStart string `json:"weekStart"` // mon | sun，月面板从周一还是周日起排
 }
 
+// QuickAccessConf 是首页右侧悬浮快捷访问卡片的配置。
+// 仅在 PC 桌面端显示，卡片只展示网站图标和名称，悬停展示描述。
+type QuickAccessConf struct {
+	Enabled bool   `json:"enabled"`
+	SiteIDs []uint `json:"siteIds"`
+}
+
 // EngineSeedVersion 是内置搜索引擎清单的版本号。往 DefaultSettings 里加内置引擎时
 // 必须 +1，否则老账号看不到新引擎（它们的 engines 数组非空，不会回落到默认值）。
 const EngineSeedVersion = 1
 
 // Settings 是一个用户的全部界面设置。
 type Settings struct {
-	Background Background   `json:"background"`
-	Layout     Layout       `json:"layout"`
-	Search     SearchConf   `json:"search"`
-	Weather    WeatherConf  `json:"weather"`
-	Calendar   CalendarConf `json:"calendar"`
-	Theme      string       `json:"theme"`    // auto | light | dark
-	Language   string       `json:"language"` // zh | en
-	Network    string       `json:"network"`  // wan | lan
+	Background  Background      `json:"background"`
+	Layout      Layout          `json:"layout"`
+	Search      SearchConf      `json:"search"`
+	Weather     WeatherConf     `json:"weather"`
+	Calendar    CalendarConf    `json:"calendar"`
+	QuickAccess QuickAccessConf `json:"quickAccess"`
+	Theme       string          `json:"theme"`    // auto | light | dark
+	Language    string          `json:"language"` // zh | en
+	Network     string          `json:"network"`  // wan | lan
 	// EngineSeed 是服务端记账字段，记录这份设置已经补过哪一版的内置引擎。
 	// 前端不认识也不该发它（types.ts 里故意没有），保存时由 handlePutSettings 盖成当前值。
 	EngineSeed int `json:"engineSeed"`
@@ -134,11 +142,12 @@ func DefaultSettings() Settings {
 		// 也不弹浏览器定位授权。默认关掉的话这个功能等于藏起来了，没人会知道它在。
 		Weather: WeatherConf{Enabled: true, LocationMode: "manual", Unit: "c", Provider: "open-meteo"},
 		// 万年历默认开着：它不发任何出站请求，也不需要用户先配点什么才有内容。
-		Calendar:   CalendarConf{Enabled: true, WeekStart: "mon"},
-		Theme:      "auto",
-		Language:   "zh",
-		Network:    "wan",
-		EngineSeed: EngineSeedVersion,
+		Calendar:    CalendarConf{Enabled: true, WeekStart: "mon"},
+		QuickAccess: QuickAccessConf{Enabled: true, SiteIDs: []uint{}},
+		Theme:       "auto",
+		Language:    "zh",
+		Network:     "wan",
+		EngineSeed:  EngineSeedVersion,
 	}
 }
 
@@ -198,6 +207,11 @@ func (s *Setting) Decode() Settings {
 	// 默认值打底），weekStart 得在这儿补，否则前端拿到空串排不出这个月的格子。
 	if out.Calendar.WeekStart == "" {
 		out.Calendar.WeekStart = "mon"
+	}
+	// 老数据没有 quickAccess 这一块：enabled 保持 DefaultSettings 里的 true，
+	// siteIds 补空切片，避免序列化成 null。
+	if out.QuickAccess.SiteIDs == nil {
+		out.QuickAccess.SiteIDs = []uint{}
 	}
 	if out.Layout.CardSize == "" {
 		out.Layout.CardSize = "md"

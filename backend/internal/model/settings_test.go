@@ -97,3 +97,17 @@ func TestDecodeTreatsMissingEngineSeedAsZero(t *testing.T) {
 		t.Fatalf("缺席的 engineSeed 应解成 0，实际 %d", got)
 	}
 }
+
+// 老数据没有 quickAccess 字段时，Decode 必须补上默认值，且 siteIds 不为 nil。
+func TestDecodeFillsMissingQuickAccess(t *testing.T) {
+	got := (&Setting{Data: `{"theme":"dark"}`}).Decode()
+	if !got.QuickAccess.Enabled {
+		t.Error("老数据 quickAccess.enabled 期望默认为 true")
+	}
+	if got.QuickAccess.SiteIDs == nil {
+		t.Fatal("老数据 quickAccess.siteIds 不应为 nil，应为空切片")
+	}
+	if len(got.QuickAccess.SiteIDs) != 0 {
+		t.Errorf("老数据 quickAccess.siteIds 长度期望为 0，实际为 %d", len(got.QuickAccess.SiteIDs))
+	}
+}
